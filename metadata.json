@@ -1,0 +1,6 @@
+{
+  "name": "FarmWatch - Satellite & AI Agricultural Inspection",
+  "description": "Evidence-grounded crop stress inspection using dated satellite observations, regional weather context, and multimodal Google AI advisory.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
