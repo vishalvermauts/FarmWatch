@@ -136,6 +136,7 @@ flowchart TB
 ├────────────────────────────────────────────────────────────────────────┤
 │                          REMOTE SENSING                                │
 │  Copernicus Sentinel-2 L2A Multi-Spectral (Bands 4, 8, 11, SCL)       │
+│  Google Earth Engine API (Live Map Tiles via google-auth-library)       │
 │  Open-Meteo Regional Meteorological Model API (~11km Grid)             │
 ├────────────────────────────────────────────────────────────────────────┤
 │                     SECURITY & CLOUD DEPLOYMENT                        │
@@ -315,10 +316,16 @@ Copy the environment example file:
 ```bash
 cp .env.example .env
 ```
-Set your `GEMINI_API_KEY` in `.env`:
+Set your environment variables in `.env`:
 ```env
 GEMINI_API_KEY="AIzaSyYourKeyHere..."
 APP_URL="http://localhost:3000"
+
+# Optional: Google Earth Engine (Live Sentinel-2 Tiles)
+# If omitted, FarmWatch automatically runs in Offline Vector Simulation mode
+GEE_SERVICE_ACCOUNT_EMAIL="your-service-account@your-project.iam.gserviceaccount.com"
+GEE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+GEE_PROJECT_ID="your-gcp-project-id"
 ```
 
 ### 3. Start Unified Full-Stack Server

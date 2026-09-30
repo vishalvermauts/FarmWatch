@@ -154,6 +154,10 @@ export const translations = {
       },
       geoJsonPrompt: 'Paste a GeoJSON Feature or Polygon coordinate ring in standard WGS84 (EPSG:4326).',
       importValidate: 'Import & Validate',
+      geeLive: 'Live Earth Engine Active',
+      geeFallback: 'Offline Vector Mode (Simulation)',
+      geeLoading: 'Connecting to Earth Engine...',
+      geePass: 'Pass',
     },
     satellite: {
       title: 'Sentinel-2 L2A Time-Series Analysis',
@@ -512,6 +516,10 @@ export const translations = {
       },
       geoJsonPrompt: 'मानक WGS84 (EPSG:4326) में GeoJSON या बहुभुज निर्देशांक पेस्ट करें।',
       importValidate: 'आयात एवं सत्यापन करें',
+      geeLive: 'सक्रिय गूगल अर्थ इंजन',
+      geeFallback: 'ऑफ़लाइन वेक्टर मोड (सिम्युलेशन)',
+      geeLoading: 'गूगल अर्थ इंजन से कनेक्ट हो रहा है...',
+      geePass: 'पास',
     },
     satellite: {
       title: 'सेंटिनल-2 एल2ए उपग्रह समय-श्रृंखला विश्लेषण',

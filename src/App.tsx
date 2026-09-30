@@ -13,7 +13,7 @@ import { PrivacyCenterView } from './components/PrivacyCenterView';
 import { NewFieldModal } from './components/NewFieldModal';
 import { WifiOff, AlertCircle } from 'lucide-react';
 
-const STORAGE_KEY = 'farmwatch_state_v1';
+const STORAGE_KEY = 'farmwatch_state_v4';
 
 export default function App() {
   const [language, setLanguage] = useState<Language>('en');
@@ -31,7 +31,7 @@ export default function App() {
     return INITIAL_FIELDS;
   });
 
-  const [selectedFieldId, setSelectedFieldId] = useState<string>(fields[0]?.id || 'FIELD-NASHIK-01');
+  const [selectedFieldId, setSelectedFieldId] = useState<string>(fields[0]?.id || 'FIELD-NASHIK-DINDORI');
   const [weather, setWeather] = useState<WeatherContext | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [newFieldModalOpen, setNewFieldModalOpen] = useState(false);
@@ -201,7 +201,9 @@ export default function App() {
 
         {activeTab === 'fields' && (
           <FieldGisView
+            fields={fields}
             selectedField={selectedField}
+            onSelectField={(f) => setSelectedFieldId(f.id)}
             onUpdateFieldGeometry={handleUpdateGeometry}
             language={language}
           />

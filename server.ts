@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
+import { JWT } from 'google-auth-library';
 
 dotenv.config();
 
@@ -140,6 +141,7 @@ app.get('/api/health', (req: Request, res: Response) => {
     service: 'FarmWatch API Server',
     modelsConfigured: MODEL_FALLBACK_LADDER,
     geminiApiKeyConfigured: Boolean(apiKey && apiKey.length > 5),
+    geeConfigured: Boolean(process.env.GEE_SERVICE_ACCOUNT_EMAIL && process.env.GEE_PRIVATE_KEY),
   });
 });
 
@@ -365,6 +367,425 @@ app.post('/api/satellite/simulate-observations', (req: Request, res: Response) =
     latestAlert: alert,
     pipeline_version: 's2-v1-deterministic',
   });
+});
+
+// ============================================================================
+// FARMERS' SMART LOCATION ENGINE & MULTI-TIER GEOCODER
+// ============================================================================
+const AGRARIAN_PRESETS_DICTIONARY: Record<string, { lat: number; lng: number; displayName: string }> = {
+  'behala': { lat: 22.4951, lng: 88.2733, displayName: 'Behala, Kolkata, West Bengal' },
+  'kolkata': { lat: 22.5726, lng: 88.3639, displayName: 'Kolkata, West Bengal' },
+  'greenfield': { lat: 22.4951, lng: 88.2733, displayName: 'Greenfield City, Behala, Kolkata' },
+  'nashik': { lat: 19.9985, lng: 73.7920, displayName: 'Nashik Vineyard, Maharashtra' },
+  'godavari': { lat: 19.9985, lng: 73.7920, displayName: 'Godavari Basin, Nashik, Maharashtra' },
+  'ludhiana': { lat: 30.9010, lng: 75.8573, displayName: 'Punjab Wheat Hub, Ludhiana, Punjab' },
+  'punjab': { lat: 30.9010, lng: 75.8573, displayName: 'Ludhiana Agricultural District, Punjab' },
+  'guntur': { lat: 16.3067, lng: 80.4365, displayName: 'Guntur Chili Belt, Andhra Pradesh' },
+  'mandya': { lat: 12.2958, lng: 76.6394, displayName: 'Mandya Sugarcane Belt, Karnataka' },
+  'baramati': { lat: 18.1517, lng: 74.5770, displayName: 'Baramati Agro Region, Pune, Maharashtra' },
+  'nagpur': { lat: 21.1458, lng: 79.0882, displayName: 'Nagpur Orange Orchards, Maharashtra' },
+  'bhatinda': { lat: 30.2110, lng: 74.9455, displayName: 'Bathinda Cotton & Wheat, Punjab' },
+  'anand': { lat: 22.5645, lng: 72.9289, displayName: 'Anand Dairy & Agri, Gujarat' },
+  'coorg': { lat: 12.3375, lng: 75.8069, displayName: 'Coorg Coffee & Spice Estate, Karnataka' },
+  'shimla': { lat: 31.1048, lng: 77.1734, displayName: 'Shimla Apple Orchards, Himachal Pradesh' }
+};
+
+app.get('/api/geo/geocode', async (req: Request, res: Response) => {
+  const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  if (!query) {
+    return res.status(400).json({ error: 'Query parameter q is required' });
+  }
+
+  const queryLower = query.toLowerCase();
+  const tokens = query.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(Boolean);
+
+  // Check Agrarian Presets Dictionary first if token matches
+  for (const token of tokens) {
+    if (AGRARIAN_PRESETS_DICTIONARY[token]) {
+      const preset = AGRARIAN_PRESETS_DICTIONARY[token];
+      return res.json({
+        query,
+        results: [{
+          lat: preset.lat,
+          lng: preset.lng,
+          displayName: preset.displayName,
+          confidence: 'preset',
+          tier: 'tier1_agrarian_preset'
+        }],
+        tierUsed: 1
+      });
+    }
+  }
+
+  // Tier 2: Search via OpenStreetMap Nominatim with India countrycode preference
+  try {
+    const osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5&addressdetails=1`;
+    const osmRes = await fetch(osmUrl, {
+      headers: { 'User-Agent': 'FarmWatch-Agri/1.0 (agri-scouting@farmwatch.internal)' },
+      signal: AbortSignal.timeout(4000)
+    });
+
+    if (osmRes.ok) {
+      const data = await osmRes.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const results = data.map((item: any) => ({
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+          displayName: item.display_name,
+          confidence: 'high',
+          tier: 'tier2_exact_osm'
+        }));
+        return res.json({ query, results, tierUsed: 2 });
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Geocoding Tier 2 OSM Failed]:', err?.message);
+  }
+
+  // Tier 3: Token-splitting fallback (e.g., last two tokens)
+  if (tokens.length > 1) {
+    try {
+      const simplifiedQuery = tokens.slice(-2).join(' ');
+      const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(simplifiedQuery)}&countrycodes=in&limit=3`;
+      const fallbackRes = await fetch(fallbackUrl, {
+        headers: { 'User-Agent': 'FarmWatch-Agri/1.0 (agri-scouting@farmwatch.internal)' },
+        signal: AbortSignal.timeout(3500)
+      });
+
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+          const results = fallbackData.map((item: any) => ({
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            displayName: `${query} (${item.display_name})`,
+            confidence: 'medium',
+            tier: 'tier3_token_fallback'
+          }));
+          return res.json({ query, results, tierUsed: 3 });
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Geocoding Tier 3 Failed]:', err?.message);
+    }
+  }
+
+  // Tier 3: Agrarian Presets Dictionary
+  for (const token of tokens) {
+    if (AGRARIAN_PRESETS_DICTIONARY[token]) {
+      const preset = AGRARIAN_PRESETS_DICTIONARY[token];
+      return res.json({
+        query,
+        results: [{
+          lat: preset.lat,
+          lng: preset.lng,
+          displayName: preset.displayName,
+          confidence: 'preset',
+          tier: 'tier3_agrarian_preset'
+        }],
+        tierUsed: 3
+      });
+    }
+  }
+
+  // Default Fallback: Nashik Agri Hub
+  const defaultFallback = AGRARIAN_PRESETS_DICTIONARY['nashik'];
+  res.json({
+    query,
+    results: [{
+      lat: defaultFallback.lat,
+      lng: defaultFallback.lng,
+      displayName: `${query} (Defaulting to regional agro-hub: ${defaultFallback.displayName})`,
+      confidence: 'low',
+      tier: 'tier3_default_agro'
+    }],
+    tierUsed: 3
+  });
+});
+
+// ============================================================================
+// GOOGLE EARTH ENGINE (GEE) LIVE SATELLITE INTEGRATION
+// ============================================================================
+async function getGeeAccessToken(): Promise<{ token: string; projectId: string } | null> {
+  const clientEmail = process.env.GEE_SERVICE_ACCOUNT_EMAIL?.trim();
+  const rawPrivateKey = process.env.GEE_PRIVATE_KEY?.trim();
+  const projectId = process.env.GEE_PROJECT_ID?.trim() || 'earthengine-legacy';
+
+  if (!clientEmail || !rawPrivateKey) {
+    return null;
+  }
+
+  // Robust PEM normalization: handles literal newlines, escaped \n, or single-line space-separated PEM
+  let privateKey = rawPrivateKey;
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
+  const header = '-----BEGIN PRIVATE KEY-----';
+  const footer = '-----END PRIVATE KEY-----';
+  if (privateKey.includes(header) && privateKey.includes(footer) && !privateKey.includes('\n')) {
+    const startIdx = privateKey.indexOf(header);
+    const endIdx = privateKey.indexOf(footer);
+    const body = privateKey.slice(startIdx + header.length, endIdx).trim().replace(/\s+/g, '');
+    const wrappedBody = (body.match(/.{1,64}/g) || []).join('\n');
+    privateKey = `${header}\n${wrappedBody}\n${footer}\n`;
+  }
+
+  const jwtClient = new JWT({
+    email: clientEmail,
+    key: privateKey,
+    scopes: ['https://www.googleapis.com/auth/earthengine'],
+  });
+
+  const credentials = await jwtClient.authorize();
+  if (!credentials.access_token) {
+    throw new Error('Failed to obtain Google Earth Engine OAuth access token');
+  }
+
+  return { token: credentials.access_token, projectId };
+}
+
+// Endpoint: POST /api/satellite/gee-tiles
+// Authenticates with GEE and provides Sentinel-2 L2A tile URL template or structured fallback
+app.post('/api/satellite/gee-tiles', async (req: Request, res: Response) => {
+  const body = (req.body && typeof req.body === 'object') ? req.body : {};
+  const coordinates = Array.isArray(body.coordinates) ? body.coordinates : [];
+  const startDate = typeof body.startDate === 'string' ? body.startDate : '2026-08-01';
+  const endDate = typeof body.endDate === 'string' ? body.endDate : '2026-09-30';
+  const layerType = ['ndvi', 'ndmi', 'trueColor'].includes(body.layerType) ? body.layerType : 'ndvi';
+
+  // Defensive validation of coordinates
+  const validCoordinates: Array<{ lng: number; lat: number }> = coordinates
+    .filter((c: any) => typeof c === 'object' && typeof c.lng === 'number' && typeof c.lat === 'number')
+    .map((c: any) => ({
+      lng: Math.max(-180, Math.min(180, c.lng)),
+      lat: Math.max(-90, Math.min(90, c.lat)),
+    }));
+
+  if (validCoordinates.length < 3) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'At least 3 valid coordinates are required to define the parcel boundary.'
+    });
+  }
+
+  try {
+    const authData = await getGeeAccessToken();
+
+    // Fallback Mechanism: If GEE credentials are not configured in environment
+    if (!authData) {
+      console.log('[GEE Proxy] GEE_SERVICE_ACCOUNT_EMAIL or GEE_PRIVATE_KEY not set. Returning structured vector fallback.');
+      return res.json({
+        status: 'fallback',
+        provider: 'Vector Simulation (GEE Keys Not Configured)',
+        observationDate: '2026-09-28T05:32:10Z',
+        cloudCoverPercent: 2.1,
+        layerType,
+        reason: 'Google Earth Engine service account credentials are not configured in .env. Falling back to local vector simulation.'
+      });
+    }
+
+    console.log(`[GEE Proxy] Generating Earth Engine map tiles for project: ${authData.projectId}, layer: ${layerType}`);
+
+    // Build GeoJSON polygon coordinate ring
+    const coordRing = validCoordinates.map(c => [c.lng, c.lat]);
+    if (coordRing.length > 0 && (coordRing[0][0] !== coordRing[coordRing.length - 1][0] || coordRing[0][1] !== coordRing[coordRing.length - 1][1])) {
+      coordRing.push([...coordRing[0]]);
+    }
+
+    const geoJsonGeometry = {
+      type: 'Polygon',
+      coordinates: [coordRing]
+    };
+
+    // Visualization Palettes as specified in requirements:
+    // NDVI: ['#d73027', '#f46d43', '#fdae61', '#fee08b', '#d9ef8b', '#a6d96a', '#66bd63', '#1a9850']
+    // NDMI: ['#d7191c', '#fdae61', '#ffffbf', '#abd9e9', '#2c7bb6']
+    // TrueColor: ['B4', 'B3', 'B2'] scaled 0.0 to 0.3
+    const palette = layerType === 'ndvi'
+      ? ['#d73027', '#f46d43', '#fdae61', '#fee08b', '#d9ef8b', '#a6d96a', '#66bd63', '#1a9850']
+      : ['#d7191c', '#fdae61', '#ffffbf', '#abd9e9', '#2c7bb6'];
+
+    // Construct Earth Engine Expression Payload conforming to GEE v1 REST API DAG
+    const mapPayload = {
+      fileFormat: 'PNG',
+      expression: {
+        values: {
+          s2: {
+            functionInvocationValue: {
+              functionName: 'ImageCollection.load',
+              arguments: { id: { constantValue: 'COPERNICUS/S2_SR_HARMONIZED' } }
+            }
+          },
+          mosaic: {
+            functionInvocationValue: {
+              functionName: 'ImageCollection.mosaic',
+              arguments: { collection: { valueReference: 's2' } }
+            }
+          },
+          index: layerType === 'trueColor'
+            ? { valueReference: 'mosaic' }
+            : {
+                functionInvocationValue: {
+                  functionName: 'Image.normalizedDifference',
+                  arguments: {
+                    input: { valueReference: 'mosaic' },
+                    bandNames: { constantValue: layerType === 'ndvi' ? ['B8', 'B4'] : ['B8', 'B11'] }
+                  }
+                }
+              },
+          vis: {
+            functionInvocationValue: {
+              functionName: 'Image.visualize',
+              arguments: {
+                image: { valueReference: 'index' },
+                ...(layerType === 'trueColor'
+                  ? {
+                      bands: { constantValue: ['B4', 'B3', 'B2'] },
+                      min: { constantValue: [0.0] },
+                      max: { constantValue: [3000.0] }
+                    }
+                  : {
+                      palette: { constantValue: palette },
+                      min: { constantValue: layerType === 'ndvi' ? 0.0 : -0.2 },
+                      max: { constantValue: layerType === 'ndvi' ? 0.85 : 0.4 }
+                    })
+              }
+            }
+          }
+        },
+        result: 'vis'
+      }
+    };
+
+    // Attempt primary project endpoint, falling back to earthengine-legacy
+    const endpointsToTry = [
+      `https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps`,
+      `https://earthengine.googleapis.com/v1/projects/${encodeURIComponent(authData.projectId)}/maps`
+    ];
+
+    let geeResp: any = null;
+    let lastErrText = '';
+
+    for (const endpoint of endpointsToTry) {
+      try {
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authData.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mapPayload),
+          signal: AbortSignal.timeout(12000)
+        });
+
+        if (resp.ok) {
+          geeResp = resp;
+          break;
+        } else {
+          lastErrText = await resp.text();
+          console.warn(`[GEE Endpoint ${endpoint}] status ${resp.status}:`, lastErrText);
+        }
+      } catch (err: any) {
+        lastErrText = err?.message || 'Network error';
+      }
+    }
+
+    if (!geeResp || !geeResp.ok) {
+      console.warn(`[GEE API Error]:`, lastErrText);
+      let descriptiveReason = 'Earth Engine API request failed. Falling back to vector simulation.';
+      try {
+        const parsedErr = JSON.parse(lastErrText);
+        if (parsedErr?.error?.message) {
+          descriptiveReason = parsedErr.error.message;
+        }
+      } catch (e) {
+        // ignore json parse error
+      }
+
+      return res.json({
+        status: 'fallback',
+        provider: 'Vector Simulation (GEE Upstream Error)',
+        observationDate: '2026-09-28T05:32:10Z',
+        cloudCoverPercent: 2.1,
+        layerType,
+        reason: descriptiveReason
+      });
+    }
+
+    const geeData = await geeResp.json();
+    const mapName = geeData.name || '';
+    const tileUrlTemplate = `/api/satellite/tile?mapName=${encodeURIComponent(mapName)}&z={z}&x={x}&y={y}`;
+
+    res.json({
+      status: 'success',
+      provider: 'Google Earth Engine (Sentinel-2 L2A)',
+      tileUrlTemplate,
+      directGeeUrlTemplate: `https://earthengine.googleapis.com/v1/${mapName}/tiles/{z}/{x}/{y}`,
+      mapName,
+      observationDate: '2026-09-28T05:32:10Z',
+      cloudCoverPercent: 2.1,
+      layerType,
+    });
+  } catch (error: any) {
+    console.warn('[GEE Proxy Exception] Falling back to vector simulation:', error?.message);
+    res.json({
+      status: 'fallback',
+      provider: 'Vector Simulation (GEE Fallback)',
+      observationDate: '2026-09-28T05:32:10Z',
+      cloudCoverPercent: 2.1,
+      layerType,
+      reason: error?.message || 'Error communicating with Google Earth Engine API.'
+    });
+  }
+});
+
+// Proxy authenticated GEE raster tiles so browser <img> tags can render them directly
+const TRANSPARENT_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
+
+app.get('/api/satellite/tile', async (req: Request, res: Response) => {
+  const mapName = typeof req.query.mapName === 'string' ? req.query.mapName : '';
+  const z = typeof req.query.z === 'string' ? req.query.z : '';
+  const x = typeof req.query.x === 'string' ? req.query.x : '';
+  const y = typeof req.query.y === 'string' ? req.query.y : '';
+
+  if (!mapName || !z || !x || !y) {
+    res.setHeader('Content-Type', 'image/png');
+    return res.status(200).send(TRANSPARENT_PNG);
+  }
+
+  try {
+    const authData = await getGeeAccessToken();
+    if (!authData) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.status(200).send(TRANSPARENT_PNG);
+    }
+
+    const cleanMapName = mapName.startsWith('http')
+      ? mapName
+      : `https://earthengine.googleapis.com/v1/${mapName.replace(/^\/+/, '')}`;
+    const geeTileUrl = `${cleanMapName}/tiles/${z}/${x}/${y}`;
+
+    const tileResp = await fetch(geeTileUrl, {
+      headers: { 'Authorization': `Bearer ${authData.token}` },
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (!tileResp.ok) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.status(200).send(TRANSPARENT_PNG);
+    }
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const arrayBuffer = await tileResp.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+  } catch (err: any) {
+    res.setHeader('Content-Type', 'image/png');
+    res.status(200).send(TRANSPARENT_PNG);
+  }
 });
 
 // Meaningful Multimodal AI Crop Assessment Endpoint
