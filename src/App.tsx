@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FarmField, Language, WeatherContext, Coordinate, AIAdvisoryEnvelope, FarmerAction } from './types/farmwatch';
 import { INITIAL_FIELDS } from './utils/mockData';
+import { translations } from './utils/i18n';
 import { TopBar } from './components/TopBar';
 import { DashboardView } from './components/DashboardView';
 import { FieldGisView } from './components/FieldGisView';
@@ -34,6 +35,8 @@ export default function App() {
   const [weather, setWeather] = useState<WeatherContext | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [newFieldModalOpen, setNewFieldModalOpen] = useState(false);
+
+  const t = translations[language];
 
   // Sync state to local storage safely
   useEffect(() => {
@@ -121,7 +124,7 @@ export default function App() {
       );
     } catch (err) {
       console.error(err);
-      alert('Could not update satellite observations.');
+      alert(language === 'hi' ? 'उपग्रह प्रेक्षण अद्यतन करने में असमर्थ।' : 'Could not update satellite observations.');
     }
   };
 
@@ -170,7 +173,7 @@ export default function App() {
       {!isOnline && (
         <div className="bg-[#FFFBEB] border-b border-[#FDE68A] text-[#92400E] px-4 py-2 text-xs flex items-center justify-center gap-2">
           <WifiOff className="w-4 h-4 text-[#D97706]" />
-          <span>Offline Mode: You are viewing locally cached field boundaries and observations.</span>
+          <span>{t.offlineAlert}</span>
         </div>
       )}
 
@@ -258,9 +261,9 @@ export default function App() {
       <footer className="bg-[#FFFFFF] border-t border-[#E1E8DF] py-6 px-4 sm:px-6 text-xs text-[#526D5A] mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[#14261A] font-display">FarmWatch</span>
+            <span className="font-bold text-[#14261A] font-display">{t.brand}</span>
             <span aria-hidden="true">·</span>
-            <span>Evidence-Grounded Agricultural Decision Support</span>
+            <span>{t.footerSubtitle}</span>
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">

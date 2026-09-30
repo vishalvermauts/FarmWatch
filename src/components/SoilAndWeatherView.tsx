@@ -35,7 +35,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
     availablePhosphorusKgHa: selectedField.soilReport.availablePhosphorusKgHa,
     availablePotassiumKgHa: selectedField.soilReport.availablePotassiumKgHa,
     electricalConductivityDsM: selectedField.soilReport.electricalConductivityDsM,
-    labName: selectedField.soilReport.labName || 'District Soil Testing Center',
+    labName: selectedField.soilReport.labName || (language === 'hi' ? 'जिला मृदा परीक्षण केंद्र' : 'District Soil Testing Center'),
   });
 
   const [isEditingSoil, setIsEditingSoil] = useState(false);
@@ -60,11 +60,11 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
       {/* Header Banner */}
       <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-5 shadow-xs">
         <div className="flex items-center gap-2 text-xs font-medium text-[#536A5B]">
-          <span>Open-Meteo v1 Forecast Model</span>
+          <span>{t.soilWeather.tags.model}</span>
           <span aria-hidden="true">·</span>
-          <span>Laboratory Soil Health Card</span>
+          <span>{t.soilWeather.tags.soilCard}</span>
           <span aria-hidden="true">·</span>
-          <span>Regional Context</span>
+          <span>{t.soilWeather.tags.regional}</span>
         </div>
         <h2 className="text-xl font-bold tracking-tight text-[#14261A] font-display mt-0.5">
           {t.soilWeather.title}
@@ -83,7 +83,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
               </h3>
             </div>
             <span className="text-[11px] text-[#5C7564] font-mono tabular-nums">
-              Coords: {weather?.coordinates?.latitude ?? 19.99}°, {weather?.coordinates?.longitude ?? 73.78}°
+              {t.soilWeather.coordsLabel} {weather?.coordinates?.latitude ?? 19.99}°, {weather?.coordinates?.longitude ?? 73.78}°
             </span>
           </div>
 
@@ -93,19 +93,19 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
               {/* Current Overview Bar */}
               <div className="grid grid-cols-3 gap-3 p-3 bg-[#F6FAF5] rounded-xl border border-[#DEEADE] text-center">
                 <div>
-                  <span className="text-[11px] text-[#556F5D] block">Current Temp</span>
+                  <span className="text-[11px] text-[#556F5D] block">{t.soilWeather.currentTemp}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {weather.summary.currentTemp}°C
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-[#556F5D] block">Past 3-Day Rain</span>
+                  <span className="text-[11px] text-[#556F5D] block">{t.soilWeather.past3DaysRain}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {weather.summary.recentPrecipitationSum.toFixed(1)} mm
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-[#556F5D] block">Next 4-Day Rain</span>
+                  <span className="text-[11px] text-[#556F5D] block">{t.soilWeather.next4DaysRain}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {weather.summary.forecastPrecipitationSum.toFixed(1)} mm
                   </span>
@@ -115,7 +115,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
               {/* 7-Day Forecast Grid */}
               <div className="space-y-2">
                 <span className="text-xs font-semibold text-[#486350] tracking-wide uppercase block">
-                  7-Day Precipitation & Temperature
+                  {t.soilWeather.precipTemp7Day}
                 </span>
                 <div className="space-y-1.5 text-xs font-mono tabular-nums">
                   {weather.daily?.time?.slice(0, 7).map((date, idx) => {
@@ -132,7 +132,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                         }`}
                       >
                         <span className="w-24 text-[#14261A]">
-                          {date} {isToday ? '(Today)' : ''}
+                          {date} {isToday ? t.soilWeather.today : ''}
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="text-[#3F5B46]">
@@ -156,7 +156,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
             </div>
           ) : (
             <div className="p-8 text-center text-xs text-[#526D5A]">
-              Loading regional meteorological context...
+              {t.soilWeather.loadingWeather}
             </div>
           )}
         </div>
@@ -183,15 +183,15 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
             <div className="space-y-4 text-xs">
               <div className="p-3 bg-[#F9FCF8] rounded-xl border border-[#E7EFE6] space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-[#657E6D]">Testing Laboratory:</span>
-                  <span className="font-semibold text-[#14261A]">{selectedField.soilReport.labName || 'Certified Soil Lab'}</span>
+                  <span className="text-[#657E6D]">{t.soilWeather.testingLabLabel}</span>
+                  <span className="font-semibold text-[#14261A]">{selectedField.soilReport.labName || (language === 'hi' ? 'प्रमाणित मृदा प्रयोगशाला' : 'Certified Soil Lab')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#657E6D]">Sampled On:</span>
+                  <span className="text-[#657E6D]">{t.soilWeather.sampledOnLabel}</span>
                   <span className="font-mono tabular-nums text-[#14261A]">{selectedField.soilReport.sampledOn}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#657E6D]">Farmer Confirmation:</span>
+                  <span className="text-[#657E6D]">{t.soilWeather.farmerConfirmLabel}</span>
                   <span className="font-mono tabular-nums text-[#14261A]">
                     {formatDate(selectedField.soilReport.confirmedAt, language)}
                   </span>
@@ -201,51 +201,51 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
               {/* Analyte Metrics Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-                  <span className="text-[#657E6D] text-[11px] block">Soil Reaction (pH)</span>
+                  <span className="text-[#657E6D] text-[11px] block">{t.soilWeather.soilPh}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {selectedField.soilReport.ph}
                   </span>
-                  <span className="text-[10px] text-[#556F5D] block mt-0.5">Optimal range: 6.5 - 7.5</span>
+                  <span className="text-[10px] text-[#556F5D] block mt-0.5">{t.soilWeather.optimalRangePh}</span>
                 </div>
 
                 <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-                  <span className="text-[#657E6D] text-[11px] block">Organic Carbon (OC)</span>
+                  <span className="text-[#657E6D] text-[11px] block">{t.soilWeather.organicCarbon}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {selectedField.soilReport.organicCarbonPercent}%
                   </span>
-                  <span className="text-[10px] text-[#556F5D] block mt-0.5">Adequate: &gt; 0.50%</span>
+                  <span className="text-[10px] text-[#556F5D] block mt-0.5">{t.soilWeather.adequateOc}</span>
                 </div>
 
                 <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-                  <span className="text-[#657E6D] text-[11px] block">Available Nitrogen (N)</span>
+                  <span className="text-[#657E6D] text-[11px] block">{t.soilWeather.nitrogen}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {selectedField.soilReport.availableNitrogenKgHa} kg/ha
                   </span>
-                  <span className="text-[10px] text-[#556F5D] block mt-0.5">Low: &lt; 280 kg/ha</span>
+                  <span className="text-[10px] text-[#556F5D] block mt-0.5">{t.soilWeather.lowN}</span>
                 </div>
 
                 <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-                  <span className="text-[#657E6D] text-[11px] block">Available Phosphorus (P)</span>
+                  <span className="text-[#657E6D] text-[11px] block">{t.soilWeather.phosphorus}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {selectedField.soilReport.availablePhosphorusKgHa} kg/ha
                   </span>
-                  <span className="text-[10px] text-[#556F5D] block mt-0.5">Medium: 10 - 25 kg/ha</span>
+                  <span className="text-[10px] text-[#556F5D] block mt-0.5">{t.soilWeather.medP}</span>
                 </div>
 
                 <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-                  <span className="text-[#657E6D] text-[11px] block">Available Potassium (K)</span>
+                  <span className="text-[#657E6D] text-[11px] block">{t.soilWeather.potassium}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {selectedField.soilReport.availablePotassiumKgHa} kg/ha
                   </span>
-                  <span className="text-[10px] text-[#556F5D] block mt-0.5">High: &gt; 280 kg/ha</span>
+                  <span className="text-[10px] text-[#556F5D] block mt-0.5">{t.soilWeather.highK}</span>
                 </div>
 
                 <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-                  <span className="text-[#657E6D] text-[11px] block">Electrical Conductivity (EC)</span>
+                  <span className="text-[#657E6D] text-[11px] block">{t.soilWeather.ec}</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-[#14261A]">
                     {selectedField.soilReport.electricalConductivityDsM} dS/m
                   </span>
-                  <span className="text-[10px] text-[#556F5D] block mt-0.5">Non-saline: &lt; 1.0 dS/m</span>
+                  <span className="text-[10px] text-[#556F5D] block mt-0.5">{t.soilWeather.nonSalineEc}</span>
                 </div>
               </div>
 
@@ -254,13 +254,13 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   onClick={() => setIsEditingSoil(true)}
                   className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg transition-colors cursor-pointer"
                 >
-                  Edit Soil Test Values
+                  {t.soilWeather.editSoilBtn}
                 </button>
 
                 {saveSuccess && (
                   <span className="text-xs text-[#2E7D46] font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Values Confirmed!</span>
+                    <span>{t.soilWeather.valuesConfirmedSuccess}</span>
                   </span>
                 )}
               </div>
@@ -269,7 +269,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
             <form onSubmit={handleSaveSoil} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[#556F5D] font-medium block mb-1">Soil pH</label>
+                  <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.soilPh}</label>
                   <input
                     type="number"
                     step="0.1"
@@ -279,7 +279,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[#556F5D] font-medium block mb-1">Organic Carbon %</label>
+                  <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.organicCarbon} %</label>
                   <input
                     type="number"
                     step="0.01"
@@ -289,7 +289,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[#556F5D] font-medium block mb-1">Available Nitrogen (kg/ha)</label>
+                  <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.nitrogen} (kg/ha)</label>
                   <input
                     type="number"
                     value={soilForm.availableNitrogenKgHa}
@@ -298,7 +298,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[#556F5D] font-medium block mb-1">Available Phosphorus (kg/ha)</label>
+                  <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.phosphorus} (kg/ha)</label>
                   <input
                     type="number"
                     value={soilForm.availablePhosphorusKgHa}
@@ -307,7 +307,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[#556F5D] font-medium block mb-1">Available Potassium (kg/ha)</label>
+                  <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.potassium} (kg/ha)</label>
                   <input
                     type="number"
                     value={soilForm.availablePotassiumKgHa}
@@ -316,7 +316,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[#556F5D] font-medium block mb-1">EC (dS/m)</label>
+                  <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.ec} (dS/m)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -328,7 +328,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
               </div>
 
               <div>
-                <label className="text-[#556F5D] font-medium block mb-1">Certified Lab Name</label>
+                <label className="text-[#556F5D] font-medium block mb-1">{t.soilWeather.formLabName}</label>
                 <input
                   type="text"
                   value={soilForm.labName}
@@ -343,7 +343,7 @@ export const SoilAndWeatherView: React.FC<SoilAndWeatherViewProps> = ({
                   onClick={() => setIsEditingSoil(false)}
                   className="px-3 py-1.5 text-xs font-medium text-[#526D5A] hover:text-[#14261A]"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"

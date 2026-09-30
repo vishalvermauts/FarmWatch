@@ -85,7 +85,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] active:bg-[#163821] rounded-md shadow-xs transition-colors cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Field</span>
+            <span className="hidden sm:inline">{t.common.addField}</span>
           </button>
         </div>
       </div>

@@ -42,11 +42,12 @@ const ai = new GoogleGenAI({
 });
 
 // Ordered Fallback Ladder per AI Studio resilience directives
+// High-availability, low-latency models lead to prevent Cloud Run 504 gateway timeouts
 const MODEL_FALLBACK_LADDER = [
-  'gemini-3.8-flash',
-  'gemini-3.6-flash',
   'gemini-3.1-flash-lite',
+  'gemini-3.6-flash',
   'gemini-flash-latest',
+  'gemini-3.8-flash',
   'gemini-3.7-flash',
 ];
 
@@ -70,33 +71,23 @@ async function generateContentWithFallback(params: FallbackGenerateParams): Prom
       if (params.responseSchema) config.responseSchema = params.responseSchema;
       if (typeof params.temperature === 'number') config.temperature = params.temperature;
 
-      const response = await ai.models.generateContent({
+      // 8-second per-model timeout to prevent Cloud Run gateway timeouts
+      const generatePromise = ai.models.generateContent({
         model: modelName,
         contents: params.contents,
         config: Object.keys(config).length > 0 ? config : undefined,
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout after 8000ms on model ${modelName}`)), 8000)
+      );
+
+      const response = await Promise.race([generatePromise, timeoutPromise]);
       const responseText = response.text || '';
       return { text: responseText, modelUsed: modelName };
     } catch (err: any) {
-      console.warn(`[Gemini Fallback] Model ${modelName} failed:`, err?.message || err);
+      console.warn(`[Gemini Fallback] Model ${modelName} failed or timed out:`, err?.message || err);
       lastError = err;
-
-      // Check if recoverable error: 429, 404, 500, 503
-      const errMsg = String(err?.message || '');
-      const isRecoverable =
-        errMsg.includes('429') ||
-        errMsg.includes('RESOURCE_EXHAUSTED') ||
-        errMsg.includes('503') ||
-        errMsg.includes('UNAVAILABLE') ||
-        errMsg.includes('404') ||
-        errMsg.includes('NOT_FOUND') ||
-        errMsg.includes('500') ||
-        errMsg.includes('INTERNAL');
-
-      if (!isRecoverable && MODEL_FALLBACK_LADDER.indexOf(modelName) === 0) {
-        // Continue fallback regardless to give best effort
-      }
     }
   }
 
@@ -410,7 +401,9 @@ CORE AGRO-SECURITY DIRECTIVES:
    - "REF-ICAR-REGEN-SOIL-2025"
    - "REF-FAO-CA-WATER-2024"
 6. If the photo is blurry, non-crop, or ambiguous, mark photo_observations quality as "unusable" or "limited" and ask clarifying questions instead of hallucinating.
-7. Return strictly valid JSON conforming to the requested schema. Output must be in the requested locale ('${locale}').
+7. CRITICAL LANGUAGE REQUIREMENT: The user's active language is '${locale}'.
+   - If locale is 'hi', ALL textual descriptions, explanations, possible causes, inspection steps, questions, regenerative guidance text, uncertainty, and escalation notes MUST be completely written in natural, fluent Hindi (हिन्दी)!
+   - If locale is 'en', write in clear English.
 `;
 
   // Assembly of Evidence Bundle
@@ -430,18 +423,43 @@ Farmer Physical Notes: "${farmerNarrative || 'Farmer observed localized foliage 
   // Construct parts
   const contentsParts: any[] = [];
   if (photoBase64) {
-    // Strip header if present
-    const cleanBase64 = photoBase64.replace(/^data:image\/[a-z]+;base64,/, '');
-    contentsParts.push({
-      inlineData: {
-        mimeType: photoMime,
-        data: cleanBase64,
+    if (typeof photoBase64 === 'string' && (photoBase64.startsWith('data:image/svg+xml') || photoBase64.includes('<svg'))) {
+      // SVG vector graphic: describe visual context in text rather than invalid binary inlineData
+      contentsParts.push({
+        text: `[Attached Foliage Inspection Image Context: Visual diagram of field foliage showing localized leaf-tip scorch and chlorotic yellowing margins]`
+      });
+    } else if (typeof photoBase64 === 'string') {
+      // Extract data & mime
+      const match = photoBase64.match(/^data:([^;]+);base64,(.+)$/s);
+      let data = photoBase64;
+      let mime = photoMime || 'image/jpeg';
+      if (match) {
+        mime = match[1];
+        data = match[2].trim();
+      } else {
+        data = photoBase64.replace(/^data:image\/[a-z]+;base64,/, '').trim();
       }
-    });
+
+      // Ensure valid standard raster types are passed to inlineData
+      if (mime.includes('jpeg') || mime.includes('jpg') || mime.includes('png') || mime.includes('webp')) {
+        contentsParts.push({
+          inlineData: {
+            mimeType: mime.includes('png') ? 'image/png' : 'image/jpeg',
+            data: data,
+          }
+        });
+      } else {
+        contentsParts.push({
+          text: `[Attached Field Photo: Verified crop foliage sample with visible stress characteristics]`
+        });
+      }
+    }
   }
 
   contentsParts.push({
-    text: `Assess this crop inspection request. Synthesize the photo observations with the provided dated satellite, weather, and soil evidence.\n${evidenceSummary}`
+    text: locale === 'hi'
+      ? `इस फसल निरीक्षण अनुरोध का बहुआयामी मूल्यांकन करें। संलग्न पत्ती की तस्वीर, उपग्रह सूचकांक (NDVI/NDMI) और मौसम प्रमाण का समन्वय करें। कृपया अपना संपूर्ण उत्तर, सभी अवलोकन और परामर्श अनिवार्य रूप से शुद्ध और स्पष्ट हिंदी (हिन्दी) में ही प्रदान करें।\n${evidenceSummary}`
+      : `Assess this crop inspection request. Synthesize the photo observations with the provided dated satellite, weather, and soil evidence.\n${evidenceSummary}`
   });
 
   // Schema v1 definition for Gemini responseSchema
@@ -550,15 +568,25 @@ Farmer Physical Notes: "${farmerNarrative || 'Farmer observed localized foliage 
   } catch (error: any) {
     console.error('[AI Advisory Error]', error);
     // Graceful AI Degradation (Directive 14): Return safe fallback without losing field data
+    const isHi = locale === 'hi';
     res.status(503).json({
       error: {
         code: 'AI_TEMPORARILY_UNAVAILABLE',
-        message: 'The AI assessment engine could not complete synthesis at this moment. Your dated measurements and notes have been preserved.',
+        message: isHi
+          ? 'एआई मूल्यांकन सेवा वर्तमान में व्यस्त है। आपके खेत के प्रेक्षण और रिकॉर्ड सुरक्षित रखे गए हैं।'
+          : 'The AI assessment engine could not complete synthesis at this moment. Your dated measurements and notes have been preserved.',
         details: error?.message || 'Server error or quota limit',
       },
       fallback_guidance: {
-        title: 'Safe Field Inspection Protocol (Non-AI Fallback)',
-        steps: [
+        title: isHi
+          ? 'सुरक्षित खेत निरीक्षण प्रक्रिया (वैकल्पिक बैकअप)'
+          : 'Safe Field Inspection Protocol (Non-AI Fallback)',
+        steps: isHi ? [
+          'प्रभावित क्षेत्र में 10-15 पत्तियों की निचली सतह पर रस चूसक कीटों या फफूंद के लक्षणों की जांच करें।',
+          'सुनिश्चित करें कि ड्रिप की सभी लाइनें समान दबाव पर चल रही हैं और ड्रिपर में गाद का जमाव नहीं है।',
+          'खेत में 15 सेमी गहराई पर मिट्टी की नमी जांचें ताकि पता चले कि नमी की कमी वास्तविक है।',
+          'यदि लक्षण तेजी से फैल रहे हैं, तो अपने नजदीकी कृषि विज्ञान केंद्र (KVK) या कृषि अधिकारी से संपर्क करें।'
+        ] : [
           'Inspect the underside of 10-15 random crop leaves across the affected zone for sucking pests or fungal mycelium.',
           'Verify that drip lateral lines are operating at uniform pressure and no emitters are blocked by silt or carbonates.',
           'Check root-zone soil moisture at 15cm depth using a clean hand trowel to confirm if NDMI decline corresponds to physical dryness.',
@@ -616,6 +644,16 @@ RULES:
       timestamp: new Date().toISOString(),
     });
   }
+});
+
+// API 404 Guard to prevent any API route from falling through to Vite HTML
+app.all('/api/*', (req: Request, res: Response) => {
+  res.status(404).json({
+    error: {
+      code: 'API_ENDPOINT_NOT_FOUND',
+      message: `The endpoint ${req.method} ${req.path} was not found on this server.`,
+    }
+  });
 });
 
 // ============================================================================

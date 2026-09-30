@@ -69,7 +69,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
         id: `SOIL-${Date.now().toString(36).toUpperCase()}`,
         seasonId: `SEASON-${Date.now().toString(36).toUpperCase()}`,
         sampledOn: '2026-08-25',
-        labName: 'Nashik District Soil Lab',
+        labName: language === 'hi' ? 'नासिक जिला मृदा परीक्षण प्रयोगशाला' : 'Nashik District Soil Lab',
         ph: 7.3,
         organicCarbonPercent: 0.58,
         availableNitrogenKgHa: 225,
@@ -127,7 +127,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
       <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl max-w-lg w-full p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between border-b border-[#EEF2EC] pb-2">
           <h3 className="text-base font-bold text-[#14261A] font-display">
-            Onboard New Farm Parcel
+            {t.newField.modalTitle}
           </h3>
           <button onClick={onClose} className="text-[#657E6D] hover:text-[#14261A] text-lg font-bold">
             ×
@@ -137,7 +137,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Farm Name</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.farmNameLabel}</label>
               <input
                 type="text"
                 value={farmName}
@@ -147,7 +147,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
               />
             </div>
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Field / Plot Name</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.fieldNameLabel}</label>
               <input
                 type="text"
                 value={fieldName}
@@ -159,7 +159,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[#486350] font-semibold block mb-1">Location / District</label>
+            <label className="text-[#486350] font-semibold block mb-1">{t.newField.locationLabel}</label>
             <input
               type="text"
               value={locationName}
@@ -171,7 +171,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Crop (English)</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.cropEnLabel}</label>
               <input
                 type="text"
                 value={cropNameEn}
@@ -181,7 +181,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
               />
             </div>
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Crop (हिन्दी)</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.cropHiLabel}</label>
               <input
                 type="text"
                 value={cropNameHi}
@@ -194,7 +194,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Area (Hectares)</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.areaLabel}</label>
               <input
                 type="number"
                 step="0.05"
@@ -207,7 +207,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Sowing Date</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.sowingLabel}</label>
               <input
                 type="date"
                 value={sowingDate}
@@ -218,16 +218,16 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[#486350] font-semibold block mb-1">Irrigation Method</label>
+              <label className="text-[#486350] font-semibold block mb-1">{t.newField.irrigationLabel}</label>
               <select
                 value={irrigation}
                 onChange={(e) => setIrrigation(e.target.value as any)}
                 className="w-full p-2 border border-[#CCD8CB] rounded-lg bg-[#F8FAF7]"
               >
-                <option value="drip">Drip</option>
-                <option value="sprinkler">Sprinkler</option>
-                <option value="flood">Flood</option>
-                <option value="rainfed">Rainfed</option>
+                <option value="drip">{t.common.irrigations.drip}</option>
+                <option value="sprinkler">{t.common.irrigations.sprinkler}</option>
+                <option value="flood">{t.common.irrigations.flood}</option>
+                <option value="rainfed">{t.common.irrigations.rainfed}</option>
               </select>
             </div>
           </div>
@@ -238,13 +238,13 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
               onClick={onClose}
               className="px-3 py-1.5 text-xs font-medium text-[#465A4C] hover:text-[#14261A]"
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               type="submit"
               className="px-4 py-2 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg cursor-pointer"
             >
-              Onboard & Begin Sentinel Tracking
+              {t.newField.submitBtn}
             </button>
           </div>
         </form>

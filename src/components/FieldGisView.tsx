@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { FarmField, Language, Coordinate } from '../types/farmwatch';
 import { translations } from '../utils/i18n';
 import { calculateGeodesicAreaHa, toGeoJSONFeature, parseGeoJSON, getBoundingBox } from '../utils/geo';
@@ -78,7 +78,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
 
   const handleSaveDrawn = () => {
     if (drawnCoords.length < 3) {
-      alert('A valid polygon must have at least 3 vertices.');
+      alert(language === 'hi' ? 'मान्य बहुभुज के लिए कम से कम 3 कोने होने चाहिए।' : 'A valid polygon must have at least 3 vertices.');
       return;
     }
     const finalArea = calculateGeodesicAreaHa(drawnCoords);
@@ -95,7 +95,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
     setGeoJsonError(null);
     const parsed = parseGeoJSON(geoJsonInput);
     if (!parsed) {
-      setGeoJsonError('Invalid GeoJSON Polygon format. Expected WGS84 closed coordinate ring.');
+      setGeoJsonError(language === 'hi' ? 'अमान्य GeoJSON प्रारूप। WGS84 बंद निर्देशांक चक्र अपेक्षित है।' : 'Invalid GeoJSON Polygon format. Expected WGS84 closed coordinate ring.');
       return;
     }
     const area = calculateGeodesicAreaHa(parsed);
@@ -136,9 +136,9 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium text-[#536A5B]">
-              <span>Field ID: {selectedField.id}</span>
+              <span>{t.common.fieldId}: {selectedField.id}</span>
               <span aria-hidden="true">·</span>
-              <span className="tabular-nums">Revision: {selectedField.currentGeometry.version}</span>
+              <span className="tabular-nums">{t.common.revision}: {selectedField.currentGeometry.version}</span>
               <span aria-hidden="true">·</span>
               <span className="tabular-nums">WGS84 EPSG:4326</span>
             </div>
@@ -150,7 +150,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
             </p>
           </div>
 
-          {/* Action Button Row */}
+          {/* Interactive GIS Control Actions */}
           <div className="flex flex-wrap items-center gap-2">
             {!isDrawing ? (
               <>
@@ -159,40 +159,44 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
                     setIsDrawing(true);
                     setDrawnCoords([]);
                   }}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                 >
-                  {t.fields.drawBoundary}
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{t.fields.drawBoundary}</span>
                 </button>
+
                 <button
                   onClick={() => setGeoJsonModalOpen(true)}
-                  className="px-3 py-1.5 text-xs font-medium text-[#14261A] bg-[#F1F6F0] hover:bg-[#E5EEE4] rounded-lg transition-colors cursor-pointer border border-[#D5E0D3] flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-medium text-[#14261A] bg-[#F1F6F0] hover:bg-[#E5EEE4] border border-[#D5E0D3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <Upload className="w-3.5 h-3.5" />
+                  <Upload className="w-3.5 h-3.5 text-[#235835]" />
                   <span>{t.fields.uploadGeoJson}</span>
                 </button>
+
                 <button
                   onClick={handleExportGeoJson}
-                  className="px-3 py-1.5 text-xs font-medium text-[#14261A] bg-[#F1F6F0] hover:bg-[#E5EEE4] rounded-lg transition-colors cursor-pointer border border-[#D5E0D3] flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-medium text-[#14261A] bg-[#F1F6F0] hover:bg-[#E5EEE4] border border-[#D5E0D3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  {copiedSuccess ? <Check className="w-3.5 h-3.5 text-[#2E7D46]" /> : <Download className="w-3.5 h-3.5" />}
-                  <span>{copiedSuccess ? 'Copied GeoJSON!' : t.fields.exportGeoJson}</span>
+                  <Download className="w-3.5 h-3.5 text-[#235835]" />
+                  <span>{copiedSuccess ? t.fields.copiedSuccess : t.fields.exportGeoJson}</span>
                 </button>
               </>
             ) : (
               <>
                 <button
                   onClick={handleSaveDrawn}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#2E7D46] hover:bg-[#236337] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#2E7D46] hover:bg-[#256839] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>Confirm Boundary ({drawnCoords.length} pts)</span>
+                  <span>{t.fields.confirmBoundary}</span>
                 </button>
+
                 <button
                   onClick={handleReset}
-                  className="px-3 py-1.5 text-xs font-medium text-[#14261A] bg-[#F1F6F0] hover:bg-[#E5EEE4] rounded-lg transition-colors cursor-pointer border border-[#D5E0D3] flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-medium text-[#7A271A] bg-[#FEE2E2] hover:bg-[#FECACA] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Cancel / Reset</span>
+                  <span>{t.fields.cancelReset}</span>
                 </button>
               </>
             )}
@@ -200,59 +204,59 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
         </div>
       </div>
 
-      {/* Main Map Viewer Canvas & Sidebar Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Main Map Viewport & Invariants Inspector */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* SVG GIS Canvas (3 cols) */}
-        <div className="lg:col-span-3 bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl overflow-hidden shadow-xs flex flex-col">
+        {/* SVG Vector Map Container (2 cols) */}
+        <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl overflow-hidden shadow-xs flex flex-col">
           
-          {/* Layer Bar Controls */}
-          <div className="px-4 py-3 bg-[#F8FAF7] border-b border-[#E3EDE1] flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Map Controls Header */}
+          <div className="p-3 bg-[#F8FAF7] border-b border-[#EEF2EC] flex flex-wrap items-center justify-between gap-3 text-xs">
             
-            {/* Layer Selection Tabs (Segmented control) */}
-            <div className="flex items-center gap-1 p-1 bg-[#E8EFE6] rounded-lg">
+            {/* False Color Layer Selector */}
+            <div className="flex items-center gap-1 bg-[#EEF4EC] p-1 rounded-lg">
               <button
                 onClick={() => setActiveLayer('ndvi')}
-                className={`px-3 py-1.5 font-medium rounded-md transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded font-medium cursor-pointer transition-colors ${
                   activeLayer === 'ndvi'
-                    ? 'bg-white text-[#14261A] shadow-xs font-semibold'
+                    ? 'bg-white text-[#163821] shadow-xs'
                     : 'text-[#486350] hover:text-[#14261A]'
                 }`}
               >
-                NDVI Vegetation
+                {t.fields.bands.ndvi}
               </button>
               <button
                 onClick={() => setActiveLayer('ndmi')}
-                className={`px-3 py-1.5 font-medium rounded-md transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded font-medium cursor-pointer transition-colors ${
                   activeLayer === 'ndmi'
-                    ? 'bg-white text-[#14261A] shadow-xs font-semibold'
+                    ? 'bg-white text-[#163821] shadow-xs'
                     : 'text-[#486350] hover:text-[#14261A]'
                 }`}
               >
-                NDMI Moisture
+                {t.fields.bands.ndmi}
               </button>
               <button
                 onClick={() => setActiveLayer('trueColor')}
-                className={`px-3 py-1.5 font-medium rounded-md transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded font-medium cursor-pointer transition-colors ${
                   activeLayer === 'trueColor'
-                    ? 'bg-white text-[#14261A] shadow-xs font-semibold'
+                    ? 'bg-white text-[#163821] shadow-xs'
                     : 'text-[#486350] hover:text-[#14261A]'
                 }`}
               >
-                True Color RGB
+                {t.fields.bands.trueColor}
               </button>
             </div>
 
-            {/* Core Buffer Toggle */}
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-1.5 cursor-pointer text-[#465A4C]">
+            {/* Core Buffer Display Checkbox */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-xs text-[#3E5544] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={showCoreBuffer}
                   onChange={(e) => setShowCoreBuffer(e.target.checked)}
                   className="rounded text-[#235835] focus:ring-[#235835]"
                 />
-                <span>10m Core Buffer</span>
+                <span>{t.fields.coreBufferCheckbox}</span>
               </label>
             </div>
           </div>
@@ -370,7 +374,9 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
               {/* Drawing mode interactive prompt */}
               {isDrawing && drawnCoords.length < 3 && (
                 <text x="300" y="200" textAnchor="middle" fill="#4B6350" fontSize="13" fontWeight="500">
-                  Click on canvas to place field corner nodes (Need {3 - drawnCoords.length} more)
+                  {language === 'hi' 
+                    ? `खेत के कोने का बिंदु लगाने के लिए क्लिक करें (${3 - drawnCoords.length} और चाहिए)`
+                    : `Click on canvas to place field corner nodes (Need ${3 - drawnCoords.length} more)`}
                 </text>
               )}
             </svg>
@@ -378,18 +384,18 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
             {/* Dynamic Map Legend Overlay */}
             <div className="absolute bottom-3 left-3 bg-[#FFFFFF]/90 backdrop-blur-xs border border-[#DEE6DD] rounded-lg p-2.5 text-[11px] text-[#334638] shadow-xs">
               <span className="font-semibold block mb-1">
-                {activeLayer === 'ndvi' ? 'NDVI Vegetation Greenness' : activeLayer === 'ndmi' ? 'NDMI Canopy Moisture' : 'True Color (Red / Green / Blue)'}
+                {activeLayer === 'ndvi' ? t.fields.bands.ndvi : activeLayer === 'ndmi' ? t.fields.bands.ndmi : t.fields.bands.trueColor}
               </span>
               {activeLayer === 'ndvi' && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-16 h-2 rounded bg-gradient-to-r from-[#D96347] via-[#E5B942] to-[#2E7D46]" />
-                  <span className="tabular-nums font-mono text-[10px]">0.2 (Low) → 0.85 (Dense)</span>
+                  <span className="tabular-nums font-mono text-[10px]">0.2 → 0.85</span>
                 </div>
               )}
               {activeLayer === 'ndmi' && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-16 h-2 rounded bg-gradient-to-r from-[#C48E44] via-[#4FA4C8] to-[#1E658E]" />
-                  <span className="tabular-nums font-mono text-[10px]">-0.1 (Water Deficit) → +0.4 (High)</span>
+                  <span className="tabular-nums font-mono text-[10px]">-0.1 → +0.4</span>
                 </div>
               )}
             </div>
@@ -401,7 +407,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
               {t.fields.coreBufferNotice}
             </span>
             <span className="font-mono tabular-nums text-[#14261A]">
-              Grid Alignment: 20m UTM Zone 43N
+              {t.fields.gridAlignmentNotice}
             </span>
           </div>
         </div>
@@ -412,32 +418,32 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
           {/* Spatial Metric Card */}
           <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-4 space-y-3 shadow-xs">
             <h4 className="text-xs font-semibold text-[#486350] tracking-wide uppercase">
-              Geometry Invariants
+              {t.fields.invariantsTitle}
             </h4>
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-[#F1F5F0]">
-                <span className="text-[#657E6D]">Geodesic Area:</span>
+                <span className="text-[#657E6D]">{t.fields.geodesicAreaLabel}</span>
                 <span className="font-bold text-[#14261A] font-mono tabular-nums">
-                  {currentArea} ha
+                  {currentArea} {t.common.hectares}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#F1F5F0]">
-                <span className="text-[#657E6D]">Approximate m²:</span>
+                <span className="text-[#657E6D]">{t.fields.approxSqMeters}</span>
                 <span className="font-semibold text-[#14261A] font-mono tabular-nums">
                   {(currentArea * 10000).toLocaleString()} m²
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#F1F5F0]">
-                <span className="text-[#657E6D]">20m Pixel Count:</span>
+                <span className="text-[#657E6D]">{t.fields.pixelCountLabel}</span>
                 <span className="font-semibold text-[#14261A] font-mono tabular-nums">
                   {pixelEquivalentCount} pixels
                 </span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-[#657E6D]">Core Eligibility:</span>
+                <span className="text-[#657E6D]">{t.fields.coreEligibilityLabel}</span>
                 <span className={`font-semibold ${isSmallField ? 'text-[#B45309]' : 'text-[#2E7D46]'}`}>
-                  {isSmallField ? 'Sub-pixel Parcel' : '>= 9 Core Pixels (Pass)'}
+                  {isSmallField ? t.fields.subpixelWarning : t.fields.corePass}
                 </span>
               </div>
             </div>
@@ -446,7 +452,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
               <div className="p-2.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-lg text-[11px] text-[#92400E] flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-[#D97706] mt-0.5" />
                 <span>
-                  Parcel is smaller than 9 independent 20m pixels (~0.36 ha). Automatic satellite change alerts will be suppressed to avoid false mixed-pixel alarms. Photo scouting is recommended.
+                  {t.fields.smallFieldNotice}
                 </span>
               </div>
             )}
@@ -456,15 +462,15 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
           <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-4 space-y-3 shadow-xs">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-semibold text-[#486350] tracking-wide uppercase">
-                WGS84 Nodes ({drawnCoords.length})
+                {t.fields.nodesTitle} ({drawnCoords.length})
               </h4>
-              <span className="text-[11px] text-[#698572] font-mono">Lon / Lat</span>
+              <span className="text-[11px] text-[#698572] font-mono">{t.fields.lonLat}</span>
             </div>
 
             <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 font-mono text-[11px]">
               {drawnCoords.map((c, i) => (
                 <div key={i} className="flex justify-between py-1 px-2 bg-[#F7FAF6] rounded border border-[#E7EFE6]">
-                  <span className="text-[#556F5D]">Node {i + 1}:</span>
+                  <span className="text-[#556F5D]">{t.fields.nodeLabel} {i + 1}:</span>
                   <span className="text-[#14261A] tabular-nums">
                     {c.lng.toFixed(5)}, {c.lat.toFixed(5)}
                   </span>
@@ -493,7 +499,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
             </div>
 
             <p className="text-xs text-[#526D5A]">
-              Paste a GeoJSON Feature or Polygon coordinate ring in standard WGS84 (EPSG:4326).
+              {t.fields.geoJsonPrompt}
             </p>
 
             <textarea
@@ -515,13 +521,13 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
                 onClick={() => setGeoJsonModalOpen(false)}
                 className="px-3 py-1.5 text-xs font-medium text-[#465A4C] hover:text-[#14261A] cursor-pointer"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleImportGeoJson}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg transition-colors cursor-pointer"
               >
-                Import & Validate
+                {t.fields.importValidate}
               </button>
             </div>
           </div>

@@ -38,6 +38,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const latestObs = selectedField.observations[selectedField.observations.length - 1];
   const hasAlert = Boolean(selectedField.latestAlert);
 
+  const getCropName = (f: FarmField) =>
+    language === 'hi' ? f.activeSeason.cropNameHi : f.activeSeason.cropNameEn;
+
+  const getIrrigationLabel = (method: string) => {
+    const key = method as keyof typeof t.common.irrigations;
+    return t.common.irrigations[key] || method;
+  };
+
   return (
     <div className="space-y-6">
       
@@ -46,11 +54,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs font-medium text-[#536A5B]">
-              <span>Active Tenant: Nashik Cooperative</span>
+              <span>{t.dashboard.tenantBadge}</span>
               <span aria-hidden="true">·</span>
-              <span className="tabular-nums">{fields.length} Monitored Parcels</span>
+              <span className="tabular-nums">{fields.length} {t.dashboard.monitoredParcels}</span>
               <span aria-hidden="true">·</span>
-              <span className="tabular-nums">Sentinel-2 Harmonized L2A</span>
+              <span className="tabular-nums">{t.dashboard.sentinelTag}</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-[#14261A] font-display">
               {t.dashboard.title}
@@ -63,7 +71,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Field Selector Dropdown */}
           <div className="flex items-center gap-2">
             <label htmlFor="field-select" className="text-xs font-medium text-[#465A4C] shrink-0">
-              Active Field:
+              {t.common.activeField}:
             </label>
             <select
               id="field-select"
@@ -76,7 +84,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               {fields.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.fieldName} ({f.currentGeometry.areaHa} ha - {f.activeSeason.cropNameEn})
+                  {f.fieldName} ({f.currentGeometry.areaHa} {t.common.hectares} - {getCropName(f)})
                 </option>
               ))}
             </select>
@@ -96,13 +104,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#B45309]">
                   <span>{t.common.inspectField}</span>
                   <span aria-hidden="true">·</span>
-                  <span className="font-mono tabular-nums">Rule: {selectedField.latestAlert.rule_version}</span>
+                  <span className="font-mono tabular-nums">{t.common.rule}: {selectedField.latestAlert.rule_version}</span>
                 </div>
                 <h3 className="text-base font-bold text-[#78350F]">
-                  {selectedField.latestAlert.title}
+                  {language === 'hi' ? t.dashboard.alertTitle : selectedField.latestAlert.title}
                 </h3>
                 <p className="text-xs text-[#92400E] max-w-3xl leading-relaxed">
-                  {selectedField.latestAlert.explanation.qualifyingCriteriaMet}. Baseline NDVI:{' '}
+                  {language === 'hi' ? t.dashboard.alertExplanation : selectedField.latestAlert.explanation.qualifyingCriteriaMet}. Baseline NDVI:{' '}
                   <span className="font-mono tabular-nums font-semibold">{selectedField.latestAlert.explanation.baselineNdvi}</span>,
                   Latest NDVI:{' '}
                   <span className="font-mono tabular-nums font-semibold">{selectedField.latestAlert.explanation.latestNdvi}</span>{' '}
@@ -110,7 +118,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="font-mono tabular-nums font-semibold">{selectedField.latestAlert.explanation.relativeDeltaPercent}%</span>).
                 </p>
                 <div className="text-[11px] text-[#A16207] italic pt-0.5">
-                  {selectedField.latestAlert.explanation.disclaimer}
+                  {language === 'hi' ? t.dashboard.alertDisclaimer : selectedField.latestAlert.explanation.disclaimer}
                 </div>
               </div>
             </div>
@@ -121,14 +129,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="px-3.5 py-2 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 justify-center"
               >
                 <Camera className="w-3.5 h-3.5" />
-                <span>Upload Leaf Photo</span>
+                <span>{t.dashboard.uploadLeafPhoto}</span>
               </button>
               <button
                 onClick={() => onNavigate('actions')}
                 className="px-3.5 py-2 text-xs font-medium text-[#78350F] bg-[#FDF2DF] hover:bg-[#FBE4BE] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 justify-center"
               >
                 <ClipboardList className="w-3.5 h-3.5" />
-                <span>Log Inspection</span>
+                <span>{t.dashboard.logInspection}</span>
               </button>
             </div>
           </div>
@@ -142,7 +150,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {t.dashboard.noAlertsNotice}
               </p>
               <p className="text-xs text-[#526D5A]">
-                Latest median NDVI of <span className="font-mono tabular-nums font-medium">{latestObs?.indicators.ndvi_median ?? 'N/A'}</span> remains within nominal bounds.
+                Latest median NDVI: <span className="font-mono tabular-nums font-medium">{latestObs?.indicators.ndvi_median ?? 'N/A'}</span>
               </p>
             </div>
           </div>
@@ -150,7 +158,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => onNavigate('satellite')}
             className="text-xs font-semibold text-[#235835] hover:underline flex items-center gap-1 shrink-0"
           >
-            <span>View Timeline</span>
+            <span>{t.dashboard.viewTimeline}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -163,13 +171,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-5 space-y-3.5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#486350] tracking-wide uppercase">
-              Parcel Geometry
+              {t.dashboard.parcelGeometry}
             </span>
             <button
               onClick={() => onNavigate('fields')}
               className="text-xs text-[#235835] font-semibold hover:underline"
             >
-              Open GIS Map
+              {t.dashboard.openGis}
             </button>
           </div>
 
@@ -185,27 +193,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="border-t border-[#EEF2EC] pt-3 grid grid-cols-2 gap-2 text-xs">
             <div>
-              <span className="text-[#657E6D] block">Area (Geodesic):</span>
+              <span className="text-[#657E6D] block">{t.dashboard.geodesicArea}</span>
               <span className="font-semibold text-[#14261A] font-mono tabular-nums">
-                {selectedField.currentGeometry.areaHa} ha
+                {selectedField.currentGeometry.areaHa} {t.common.hectares}
               </span>
             </div>
             <div>
-              <span className="text-[#657E6D] block">Crop & Variety:</span>
+              <span className="text-[#657E6D] block">{t.dashboard.cropVariety}</span>
               <span className="font-semibold text-[#14261A] truncate block">
-                {language === 'hi' ? selectedField.activeSeason.cropNameHi : selectedField.activeSeason.cropNameEn}
+                {getCropName(selectedField)}
               </span>
             </div>
             <div>
-              <span className="text-[#657E6D] block">Sowing Date:</span>
+              <span className="text-[#657E6D] block">{t.dashboard.sowingLabel}</span>
               <span className="font-semibold text-[#14261A] font-mono tabular-nums">
                 {selectedField.activeSeason.sowingDate}
               </span>
             </div>
             <div>
-              <span className="text-[#657E6D] block">Irrigation System:</span>
+              <span className="text-[#657E6D] block">{t.dashboard.irrigationSystem}</span>
               <span className="font-semibold text-[#14261A] capitalize">
-                {selectedField.activeSeason.irrigationMethod}
+                {getIrrigationLabel(selectedField.activeSeason.irrigationMethod)}
               </span>
             </div>
           </div>
@@ -215,19 +223,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-5 space-y-3.5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#486350] tracking-wide uppercase">
-              Sentinel-2 Indices
+              {t.dashboard.sentinelIndices}
             </span>
             <button
               onClick={() => onNavigate('satellite')}
               className="text-xs text-[#235835] font-semibold hover:underline"
             >
-              History ({selectedField.observations.length})
+              {t.common.history} ({selectedField.observations.length})
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-              <span className="text-[11px] text-[#556F5D] block">NDVI (Greenness)</span>
+              <span className="text-[11px] text-[#556F5D] block">{t.satellite.ndviLegend}</span>
               <span className="text-2xl font-bold font-mono tabular-nums text-[#14261A]">
                 {latestObs?.indicators.ndvi_median ?? 'N/A'}
               </span>
@@ -237,7 +245,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             <div className="p-3 bg-[#F6FAF5] rounded-lg border border-[#E3EDE1]">
-              <span className="text-[11px] text-[#556F5D] block">NDMI (Canopy Moisture)</span>
+              <span className="text-[11px] text-[#556F5D] block">{t.satellite.ndmiLegend}</span>
               <span className="text-2xl font-bold font-mono tabular-nums text-[#14261A]">
                 {latestObs?.indicators.ndmi_median ?? 'N/A'}
               </span>
@@ -248,7 +256,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="border-t border-[#EEF2EC] pt-2 text-xs text-[#4E6756] flex items-center justify-between">
-            <span>Core Pixels Support:</span>
+            <span>{t.dashboard.corePixelsSupport}</span>
             <span className="font-mono tabular-nums font-semibold text-[#14261A]">
               {latestObs?.quality.valid_pixel_count}/{latestObs?.quality.total_pixel_count} ({((latestObs?.quality.coverage_core || 0) * 100).toFixed(0)}%)
             </span>
@@ -259,13 +267,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-5 space-y-3.5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#486350] tracking-wide uppercase">
-              Agro-Weather (Open-Meteo)
+              {t.dashboard.agroWeatherTitle}
             </span>
             <button
               onClick={() => onNavigate('soilWeather')}
               className="text-xs text-[#235835] font-semibold hover:underline"
             >
-              7-Day View
+              {t.dashboard.sevenDayView}
             </button>
           </div>
 
@@ -277,7 +285,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     {weather.summary.currentTemp}°C
                   </span>
                   <p className="text-xs text-[#526D5A]">
-                    High: {weather.summary.maxTempUpcoming}°C · Low: {weather.summary.minTempUpcoming}°C
+                    {t.dashboard.high}: {weather.summary.maxTempUpcoming}°C · {t.dashboard.low}: {weather.summary.minTempUpcoming}°C
                   </p>
                 </div>
                 <div className="p-2.5 bg-[#EFF7F0] rounded-lg text-[#235835]">
@@ -287,13 +295,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               <div className="border-t border-[#EEF2EC] pt-2.5 text-xs text-[#526D5A] space-y-1">
                 <div className="flex justify-between">
-                  <span>Recent 3-Day Rain:</span>
+                  <span>{t.dashboard.recentRain}</span>
                   <span className="font-mono tabular-nums font-semibold text-[#14261A]">
                     {weather.summary.recentPrecipitationSum.toFixed(1)} mm
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Forecast 4-Day Rain:</span>
+                  <span>{t.dashboard.forecastRain}</span>
                   <span className="font-mono tabular-nums font-semibold text-[#14261A]">
                     {weather.summary.forecastPrecipitationSum.toFixed(1)} mm
                   </span>
@@ -302,7 +310,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           ) : (
             <div className="text-xs text-[#6A8171] py-4 text-center">
-              Fetching regional weather context...
+              {t.dashboard.fetchingWeather}
             </div>
           )}
         </div>
@@ -318,48 +326,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </h3>
           </div>
           <span className="text-xs text-[#5C7564]">
-            Asset: <span className="font-mono text-[#14261A]">{latestObs?.id || 'N/A'}</span>
+            {t.dashboard.asset} <span className="font-mono text-[#14261A]">{latestObs?.id || 'N/A'}</span>
           </span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
           <div className="p-2.5 bg-[#F9FCF8] rounded-lg border border-[#E8EFE6]">
-            <span className="text-[#657E6D] text-[11px] block">1. Acquired (Sensor)</span>
+            <span className="text-[#657E6D] text-[11px] block">{t.dashboard.timestamps.t1}</span>
             <span className="font-mono font-medium text-[#14261A] tabular-nums block mt-0.5">
               {formatDate(latestObs?.timestamps.acquired_at, language)}
             </span>
           </div>
 
           <div className="p-2.5 bg-[#F9FCF8] rounded-lg border border-[#E8EFE6]">
-            <span className="text-[#657E6D] text-[11px] block">2. Published (ESA)</span>
+            <span className="text-[#657E6D] text-[11px] block">{t.dashboard.timestamps.t2}</span>
             <span className="font-mono font-medium text-[#14261A] tabular-nums block mt-0.5">
               {formatDate(latestObs?.timestamps.published_at, language)}
             </span>
           </div>
 
           <div className="p-2.5 bg-[#F9FCF8] rounded-lg border border-[#E8EFE6]">
-            <span className="text-[#657E6D] text-[11px] block">3. Ingested (FarmWatch)</span>
+            <span className="text-[#657E6D] text-[11px] block">{t.dashboard.timestamps.t3}</span>
             <span className="font-mono font-medium text-[#14261A] tabular-nums block mt-0.5">
               {formatDate(latestObs?.timestamps.ingested_at, language)}
             </span>
           </div>
 
           <div className="p-2.5 bg-[#F9FCF8] rounded-lg border border-[#E8EFE6]">
-            <span className="text-[#657E6D] text-[11px] block">4. Last Usable Date</span>
+            <span className="text-[#657E6D] text-[11px] block">{t.dashboard.timestamps.t4}</span>
             <span className="font-mono font-medium text-[#14261A] tabular-nums block mt-0.5">
               {formatDate(latestObs?.timestamps.last_usable_at, language)}
             </span>
           </div>
 
           <div className="p-2.5 bg-[#F9FCF8] rounded-lg border border-[#E8EFE6]">
-            <span className="text-[#657E6D] text-[11px] block">5. Processed At</span>
+            <span className="text-[#657E6D] text-[11px] block">{t.dashboard.timestamps.t5}</span>
             <span className="font-mono font-medium text-[#14261A] tabular-nums block mt-0.5">
               {formatDate(latestObs?.timestamps.processed_at, language)}
             </span>
           </div>
 
           <div className="p-2.5 bg-[#F9FCF8] rounded-lg border border-[#E8EFE6]">
-            <span className="text-[#657E6D] text-[11px] block">6. Advisory Issued</span>
+            <span className="text-[#657E6D] text-[11px] block">{t.dashboard.timestamps.t6}</span>
             <span className="font-mono font-medium text-[#14261A] tabular-nums block mt-0.5">
               {formatDate(selectedField.recentAdvisory?.generated_at, language)}
             </span>
@@ -368,7 +376,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <p className="text-[11px] text-[#698572] mt-3">
           <Info className="w-3 h-3 inline mr-1 text-[#235835]" />
-          Explicit distinction between observation date and system run time ensures zero misleading "live satellite" assumptions.
+          {t.dashboard.timestamps.notice}
         </p>
       </div>
 

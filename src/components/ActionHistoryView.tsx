@@ -34,7 +34,7 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!observationText.trim() || !actionText.trim()) {
-      alert('Please fill in both the observation and action taken.');
+      alert(language === 'hi' ? 'कृपया भौतिक प्रेक्षण और की गई कार्रवाई दोनों भरें।' : 'Please fill in both the observation and action taken.');
       return;
     }
 
@@ -64,11 +64,11 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
       <div className="bg-[#FFFFFF] border border-[#DEE6DD] rounded-xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-medium text-[#536A5B]">
-            <span>Closed-Loop Verification</span>
+            <span>{t.actions.tags.closedLoop}</span>
             <span aria-hidden="true">·</span>
-            <span className="tabular-nums">{selectedField.actions.length} Field Records</span>
+            <span className="tabular-nums">{selectedField.actions.length} {t.actions.tags.records}</span>
             <span aria-hidden="true">·</span>
-            <span>Ground Truth</span>
+            <span>{t.actions.tags.groundTruth}</span>
           </div>
           <h2 className="text-xl font-bold tracking-tight text-[#14261A] font-display mt-0.5">
             {t.actions.title}
@@ -91,7 +91,7 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
       {showAddForm && (
         <form onSubmit={handleSubmit} className="bg-[#FFFFFF] border border-[#CDE0CC] rounded-xl p-5 shadow-xs space-y-4">
           <h3 className="text-sm font-bold text-[#14261A]">
-            Record Field Inspection & Action Taken
+            {t.actions.recordFormTitle}
           </h3>
 
           <div className="space-y-3 text-xs">
@@ -102,7 +102,7 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
               <textarea
                 value={observationText}
                 onChange={(e) => setObservationText(e.target.value)}
-                placeholder="What did you observe with your eyes? (e.g. soil crusted dry, lower leaves curling, drip emitter silted)..."
+                placeholder={t.actions.observationPrompt}
                 rows={3}
                 className="w-full p-2.5 border border-[#CCD8CB] rounded-lg bg-[#F8FAF7] text-[#14261A] outline-none focus:border-[#235835]"
                 required
@@ -116,7 +116,7 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
               <textarea
                 value={actionText}
                 onChange={(e) => setActionText(e.target.value)}
-                placeholder="What corrective action did you take? (e.g. unclogged drippers 12-16, spread paddy straw mulch, adjusted valve pressure)..."
+                placeholder={t.actions.actionPrompt}
                 rows={2}
                 className="w-full p-2.5 border border-[#CCD8CB] rounded-lg bg-[#F8FAF7] text-[#14261A] outline-none focus:border-[#235835]"
                 required
@@ -125,13 +125,13 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
 
             <div>
               <label className="text-[#486350] font-semibold block mb-1">
-                Follow-up Outcome (Optional)
+                {t.actions.followUpOutcome}
               </label>
               <input
                 type="text"
                 value={outcomeText}
                 onChange={(e) => setOutcomeText(e.target.value)}
-                placeholder="Observed result after action (e.g. pressure restored to 1.1 bar, will monitor in 48 hours)..."
+                placeholder={t.actions.outcomePrompt}
                 className="w-full p-2.5 border border-[#CCD8CB] rounded-lg bg-[#F8FAF7] text-[#14261A] outline-none focus:border-[#235835]"
               />
             </div>
@@ -189,13 +189,13 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
               onClick={() => setShowAddForm(false)}
               className="px-3.5 py-1.5 text-xs text-[#526D5A] hover:text-[#14261A]"
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               type="submit"
               className="px-4 py-2 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] rounded-lg cursor-pointer"
             >
-              Save Record
+              {t.actions.saveRecord}
             </button>
           </div>
         </form>
@@ -209,7 +209,7 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
 
         {selectedField.actions.length === 0 ? (
           <div className="p-8 text-center text-xs text-[#6A8171] border border-dashed border-[#DEE6DD] rounded-lg">
-            No field actions recorded yet. Walk the field and log physical scouting observations above.
+            {t.actions.noActionsNotice}
           </div>
         ) : (
           <div className="space-y-3">
@@ -224,7 +224,7 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
                     <span aria-hidden="true" className="text-[#899E8F]">·</span>
                     <span className="text-[#556F5D] flex items-center gap-1 font-mono tabular-nums">
                       <Calendar className="w-3 h-3 text-[#235835]" />
-                      Observed: {act.observedOn}
+                      {t.actions.observedLabel} {act.observedOn}
                     </span>
                   </div>
 
@@ -232,19 +232,19 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
                     {act.alertConcernConfirmed === 'confirmed' && (
                       <span className="text-[#2E7D46] flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Alert Confirmed on Ground</span>
+                        <span>{t.actions.alertConfirmedBadge}</span>
                       </span>
                     )}
                     {act.alertConcernConfirmed === 'refuted' && (
                       <span className="text-[#B91C1C] flex items-center gap-1">
                         <XCircle className="w-3.5 h-3.5" />
-                        <span>Alert Refuted (False Positive)</span>
+                        <span>{t.actions.alertRefutedBadge}</span>
                       </span>
                     )}
                     {act.alertConcernConfirmed === 'inconclusive' && (
                       <span className="text-[#B45309] flex items-center gap-1">
                         <HelpCircle className="w-3.5 h-3.5" />
-                        <span>Inconclusive Monitoring</span>
+                        <span>{t.actions.inconclusiveBadge}</span>
                       </span>
                     )}
                   </div>
@@ -252,18 +252,18 @@ export const ActionHistoryView: React.FC<ActionHistoryViewProps> = ({
 
                 <div className="space-y-1.5 pt-1">
                   <div>
-                    <span className="text-[#657E6D] font-semibold block text-[11px]">Physical Observation:</span>
+                    <span className="text-[#657E6D] font-semibold block text-[11px]">{t.actions.physicalObsLabel}</span>
                     <p className="text-[#14261A] font-medium leading-relaxed">{act.observation}</p>
                   </div>
 
                   <div>
-                    <span className="text-[#657E6D] font-semibold block text-[11px]">Corrective Action:</span>
+                    <span className="text-[#657E6D] font-semibold block text-[11px]">{t.actions.correctiveActionLabel}</span>
                     <p className="text-[#235835] font-medium leading-relaxed">{act.actionTaken}</p>
                   </div>
 
                   {act.outcome && (
                     <div>
-                      <span className="text-[#657E6D] font-semibold block text-[11px]">Outcome / Status:</span>
+                      <span className="text-[#657E6D] font-semibold block text-[11px]">{t.actions.outcomeStatusLabel}</span>
                       <p className="text-[#4E6756] italic">{act.outcome}</p>
                     </div>
                   )}
