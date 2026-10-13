@@ -680,6 +680,7 @@ export const CropAssessmentView: React.FC<CropAssessmentViewProps> = ({
               <button
                 onClick={() => setActiveReference(null)}
                 className="text-[#657E6D] hover:text-[#14261A] text-lg font-bold"
+                aria-label="Close reference"
               >
                 ×
               </button>

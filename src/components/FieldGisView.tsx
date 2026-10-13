@@ -1036,6 +1036,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
                 onClick={handleZoomIn}
                 disabled={zoomLevel >= 3.5}
                 title="Zoom In (+) / Mouse Wheel Up"
+                aria-label="Zoom in"
                 className="w-8 h-8 rounded-lg bg-[#243327] hover:bg-[#344C39] text-white flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
               >
                 <ZoomIn className="w-4 h-4" />
@@ -1046,6 +1047,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
                 onClick={handleZoomOut}
                 disabled={zoomLevel <= 0.4}
                 title="Zoom Out (-) / Mouse Wheel Down"
+                aria-label="Zoom out"
                 className="w-8 h-8 rounded-lg bg-[#243327] hover:bg-[#344C39] text-white flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
               >
                 <ZoomOut className="w-4 h-4" />
@@ -1057,6 +1059,7 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
                 type="button"
                 onClick={handleResetZoomPan}
                 title="Reset View / Fit to Farm (⟲)"
+                aria-label="Reset view"
                 className="w-8 h-8 rounded-lg bg-[#243327] hover:bg-[#344C39] text-white flex items-center justify-center transition-colors cursor-pointer"
               >
                 <Maximize className="w-3.5 h-3.5" />
