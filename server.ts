@@ -751,7 +751,15 @@ app.get('/api/satellite/tile', async (req: Request, res: Response) => {
   const x = typeof req.query.x === 'string' ? req.query.x : '';
   const y = typeof req.query.y === 'string' ? req.query.y : '';
 
-  if (!mapName || !z || !x || !y) {
+  // Security Fix: Prevent SSRF and Path Traversal
+  // Only allow mapName to be a valid GEE map name path
+  if (!mapName || !z || !x || !y || mapName.includes('://') || mapName.includes('..')) {
+    res.setHeader('Content-Type', 'image/png');
+    return res.status(200).send(TRANSPARENT_PNG);
+  }
+
+  // Ensure tile coordinates are numeric to prevent path traversal
+  if (!/^\d+$/.test(z) || !/^\d+$/.test(x) || !/^\d+$/.test(y)) {
     res.setHeader('Content-Type', 'image/png');
     return res.status(200).send(TRANSPARENT_PNG);
   }
@@ -763,9 +771,7 @@ app.get('/api/satellite/tile', async (req: Request, res: Response) => {
       return res.status(200).send(TRANSPARENT_PNG);
     }
 
-    const cleanMapName = mapName.startsWith('http')
-      ? mapName
-      : `https://earthengine.googleapis.com/v1/${mapName.replace(/^\/+/, '')}`;
+    const cleanMapName = `https://earthengine.googleapis.com/v1/${mapName.replace(/^\/+/, '')}`;
     const geeTileUrl = `${cleanMapName}/tiles/${z}/${x}/${y}`;
 
     const tileResp = await fetch(geeTileUrl, {
