@@ -360,6 +360,17 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
     let row = 0;
     const ctx = sampleContextRef.current;
 
+    // ⚡ Bolt Optimization: Fetch entire canvas image data once outside the loop
+    // to avoid massive performance penalty of calling getImageData repeatedly.
+    let fullImageData = null;
+    if (ctx) {
+      try {
+        fullImageData = ctx.getImageData(0, 0, 600, 400).data;
+      } catch (e) {
+        // Safe fallback if cross-origin canvas blocked
+      }
+    }
+
     for (let lat = startLat; lat <= endLat; lat += dLat) {
       let col = 0;
 
@@ -374,16 +385,13 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
         let g = 140;
         let b = 95;
 
-        if (ctx && centerX >= 0 && centerX < 600 && centerY >= 0 && centerY < 400) {
-          try {
-            const data = ctx.getImageData(centerX, centerY, 1, 1).data;
-            if (data[3] > 0) {
-              r = data[0];
-              g = data[1];
-              b = data[2];
-            }
-          } catch (e) {
-            // Safe fallback if cross-origin canvas blocked
+        if (fullImageData && centerX >= 0 && centerX < 600 && centerY >= 0 && centerY < 400) {
+          // ⚡ Bolt Optimization: Read from cached array instead of crossing browser boundaries
+          const idx = (centerY * 600 + centerX) * 4;
+          if (fullImageData[idx + 3] > 0) {
+            r = fullImageData[idx];
+            g = fullImageData[idx + 1];
+            b = fullImageData[idx + 2];
           }
         }
 
