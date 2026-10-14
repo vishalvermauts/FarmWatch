@@ -763,6 +763,20 @@ app.get('/api/satellite/tile', async (req: Request, res: Response) => {
       return res.status(200).send(TRANSPARENT_PNG);
     }
 
+    // Security Fix: Prevent SSRF and token leakage by validating mapName origin
+    if (mapName.startsWith('http')) {
+      try {
+        const parsedUrl = new URL(mapName);
+        if (parsedUrl.hostname !== 'earthengine.googleapis.com') {
+          res.setHeader('Content-Type', 'image/png');
+          return res.status(403).send(TRANSPARENT_PNG);
+        }
+      } catch (e) {
+        res.setHeader('Content-Type', 'image/png');
+        return res.status(400).send(TRANSPARENT_PNG);
+      }
+    }
+
     const cleanMapName = mapName.startsWith('http')
       ? mapName
       : `https://earthengine.googleapis.com/v1/${mapName.replace(/^\/+/, '')}`;
