@@ -240,10 +240,16 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
     };
   }, [selectedField.id, activeLayer, drawnCoords.length]);
 
-  const currentArea = calculateGeodesicAreaHa(drawnCoords);
-  const areaAcres = Number((currentArea * 2.47105).toFixed(2));
-  const pixelEquivalentCount = Math.round((currentArea * 10000) / 400); // 20m grid = 400m² per pixel
-  const isSmallField = pixelEquivalentCount < 9;
+  const { currentArea, areaAcres, pixelEquivalentCount, isSmallField } = useMemo(() => {
+    const area = calculateGeodesicAreaHa(drawnCoords);
+    const pixels = Math.round((area * 10000) / 400); // 20m grid = 400m² per pixel
+    return {
+      currentArea: area,
+      areaAcres: Number((area * 2.47105).toFixed(2)),
+      pixelEquivalentCount: pixels,
+      isSmallField: pixels < 9
+    };
+  }, [drawnCoords]);
 
   // --------------------------------------------------------------------------
   // Pure 2D Flat Orthographic Viewport Projection (Rock-Solid Camera)
@@ -264,21 +270,21 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
   const approxGsdMeters = (156543 * Math.cos((centerLat * Math.PI) / 180) / Math.pow(2, effectiveTileZoom)).toFixed(1);
 
   // Flat 2D Projection: WGS84 Geographic to 600x400 SVG Viewport
-  const project = (c: Coordinate) => {
+  const project = React.useCallback((c: Coordinate) => {
     const x = ((c.lng - minLng) / (maxLng - minLng)) * 600;
     const y = 400 - ((c.lat - minLat) / (maxLat - minLat)) * 400;
     return { x, y };
-  };
+  }, [minLng, maxLng, minLat, maxLat]);
 
   // Flat 2D Unprojection: 600x400 SVG Viewport to WGS84 Geographic
-  const unproject = (x: number, y: number): Coordinate => {
+  const unproject = React.useCallback((x: number, y: number): Coordinate => {
     const lng = minLng + (x / 600) * (maxLng - minLng);
     const lat = minLat + ((400 - y) / 400) * (maxLat - minLat);
     return { lng: Number(lng.toFixed(6)), lat: Number(lat.toFixed(6)) };
-  };
+  }, [minLng, maxLng, minLat, maxLat]);
 
   // Full 2D Satellite Orthophoto Tiles covering the entire screen
-  const satelliteTiles = getSatelliteTiles(minLng, minLat, maxLng, maxLat, effectiveTileZoom);
+  const satelliteTiles = useMemo(() => getSatelliteTiles(minLng, minLat, maxLng, maxLat, effectiveTileZoom), [minLng, minLat, maxLng, maxLat, effectiveTileZoom]);
 
   // --------------------------------------------------------------------------
   // Real-Time Satellite Orthophoto Reflectance Sampler (Canvas Ground Truth)
@@ -658,22 +664,31 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
   };
 
   // Generate SVG polygon points string
-  const outerPointsStr = drawnCoords.map(project).map(p => `${p.x},${p.y}`).join(' ');
+  const outerPointsStr = useMemo(() => drawnCoords.map(project).map(p => `${p.x},${p.y}`).join(' '), [drawnCoords, project]);
 
   // Compute 10m inward core buffer polygon (scaled approximation from centroid)
-  const centroid = drawnCoords.length > 0 
-    ? drawnCoords.reduce((acc, c) => ({ lng: acc.lng + c.lng / drawnCoords.length, lat: acc.lat + c.lat / drawnCoords.length }), { lng: 0, lat: 0 })
-    : { lng: centerLng, lat: centerLat };
+  const innerBufferCoords = useMemo(() => {
+    if (drawnCoords.length === 0) return [];
+    const centroid = drawnCoords.reduce(
+      (acc, c) => ({ lng: acc.lng + c.lng / drawnCoords.length, lat: acc.lat + c.lat / drawnCoords.length }),
+      { lng: 0, lat: 0 }
+    );
+    return drawnCoords.map(c => ({
+      lng: centroid.lng + (c.lng - centroid.lng) * 0.78,
+      lat: centroid.lat + (c.lat - centroid.lat) * 0.78,
+    }));
+  }, [drawnCoords]);
 
-  const innerBufferCoords = drawnCoords.map(c => ({
-    lng: centroid.lng + (c.lng - centroid.lng) * 0.78,
-    lat: centroid.lat + (c.lat - centroid.lat) * 0.78,
-  }));
-  const innerPointsStr = innerBufferCoords.map(project).map(p => `${p.x},${p.y}`).join(' ');
+  const innerPointsStr = useMemo(() => innerBufferCoords.map(project).map(p => `${p.x},${p.y}`).join(' '), [innerBufferCoords, project]);
 
   // Count vegetated vs bare pixels
-  const vegetatedCount = sentinelPixels.filter(p => p.isVegetation).length;
-  const bareSoilCount = sentinelPixels.length - vegetatedCount;
+  const { vegetatedCount, bareSoilCount } = useMemo(() => {
+    const vegetated = sentinelPixels.filter(p => p.isVegetation).length;
+    return {
+      vegetatedCount: vegetated,
+      bareSoilCount: sentinelPixels.length - vegetated
+    };
+  }, [sentinelPixels]);
 
   return (
     <div className="space-y-4">
