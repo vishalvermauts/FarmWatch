@@ -292,6 +292,7 @@ export const NewFieldModal: React.FC<NewFieldModalProps> = ({
           <button 
             onClick={onClose} 
             className="text-[#657E6D] hover:text-[#14261A] text-2xl font-bold w-8 h-8 rounded-full hover:bg-[#F0F4EF] flex items-center justify-center cursor-pointer transition-colors"
+            aria-label={t.common.close}
           >
             ×
           </button>
