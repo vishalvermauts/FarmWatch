@@ -1,0 +1,4 @@
+## 2026-10-15 - [Critical SSRF and Token Leakage in GEE Proxy Endpoint]
+**Vulnerability:** The `/api/satellite/tile` endpoint accepted an arbitrary `mapName` query parameter which allowed absolute URLs (`http://...` or `https://...`). This allowed Server-Side Request Forgery (SSRF) since the endpoint proxied requests to the provided URL, appending the Google Earth Engine `Authorization: Bearer <token>` header, leading to token leakage to an attacker-controlled server.
+**Learning:** Never trust user input to construct URLs in proxy endpoints, especially when appending sensitive authentication tokens. The fallback logic to allow absolute URLs bypassed the intended Google API scoping.
+**Prevention:** Implement strict input validation on all proxy endpoint parameters. Explicitly reject absolute URLs and ensure the base URL is hardcoded to the intended trusted destination (`https://earthengine.googleapis.com/v1/`).
