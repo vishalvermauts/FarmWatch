@@ -1,0 +1,3 @@
+## 2024-05-14 - Memoizing SVG Points Calculation
+**Learning:** React components that do heavy mapping over arrays to generate complex SVG strings on every render can cause performance issues. In `SatelliteTimelineView.tsx`, the `ndviPoints` and `ndmiPoints` were being re-calculated on every render, even when the underlying observation data didn't change.
+**Action:** Used `React.useMemo` to memoize the calculation of the SVG strings, and `React.useCallback` to memoize the scale functions `getX` and `getY`. This ensures these relatively expensive string operations only happen when the actual observation data or chart dimensions change, leading to more efficient re-renders.

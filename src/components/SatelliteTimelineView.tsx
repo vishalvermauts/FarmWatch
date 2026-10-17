@@ -58,19 +58,23 @@ export const SatelliteTimelineView: React.FC<SatelliteTimelineViewProps> = ({
   const plotHeight = chartHeight - padTop - padBottom;
 
   // Scale: NDVI runs from 0.0 to 1.0
-  const getY = (val: number) => padTop + (1.0 - val) * plotHeight;
-  const getX = (index: number) => padLeft + (index / Math.max(1, observations.length - 1)) * plotWidth;
+  const getY = React.useCallback((val: number) => padTop + (1.0 - val) * plotHeight, [padTop, plotHeight]);
+  const getX = React.useCallback((index: number) => padLeft + (index / Math.max(1, observations.length - 1)) * plotWidth, [padLeft, observations.length, plotWidth]);
 
   // Build SVG polyline points for NDVI and NDMI
-  const ndviPoints = observations
-    .map((o, idx) => (o.indicators.ndvi_median !== null ? `${getX(idx)},${getY(o.indicators.ndvi_median)}` : null))
-    .filter(Boolean)
-    .join(' ');
+  const { ndviPoints, ndmiPoints } = React.useMemo(() => {
+    const ndvi = observations
+      .map((o, idx) => (o.indicators.ndvi_median !== null ? `${getX(idx)},${getY(o.indicators.ndvi_median)}` : null))
+      .filter(Boolean)
+      .join(' ');
 
-  const ndmiPoints = observations
-    .map((o, idx) => (o.indicators.ndmi_median !== null ? `${getX(idx)},${getY(o.indicators.ndmi_median)}` : null))
-    .filter(Boolean)
-    .join(' ');
+    const ndmi = observations
+      .map((o, idx) => (o.indicators.ndmi_median !== null ? `${getX(idx)},${getY(o.indicators.ndmi_median)}` : null))
+      .filter(Boolean)
+      .join(' ');
+
+    return { ndviPoints: ndvi, ndmiPoints: ndmi };
+  }, [observations, getX, getY]);
 
   // Compute 3-observation baseline line for NDVI if enough points
   const baselineNdvi = selectedField.latestAlert?.explanation.baselineNdvi ?? 0.58;
