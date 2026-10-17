@@ -1,0 +1,7 @@
+## 2025-02-28 - SSRF and Google Auth Token Leak in Earth Engine API
+
+**Vulnerability:** The `/api/satellite/tile` endpoint contained a Server-Side Request Forgery (SSRF) and authentication token leakage vulnerability. The `mapName` query parameter was passed directly to a `fetch` request along with a Google Earth Engine authentication bearer token. If an attacker provided a payload like `http://attacker.com/`, the server would send a request to that domain, leaking the highly sensitive authentication token in the `Authorization` header.
+
+**Learning:** The previous implementation incorrectly tried to support both absolute URLs and relative Earth Engine map names by checking `mapName.startsWith('http')`. This approach blindly trusted user input for the request destination. Authentication tokens must never be appended to requests constructed from unvalidated user input.
+
+**Prevention:** Always enforce a strict base URL for backend API requests to upstream services. Validate that user-provided input only forms the path components (and does not contain path traversal characters like `..`), rather than allowing arbitrary base URLs. We fixed this by enforcing the `https://earthengine.googleapis.com/v1/` prefix and cleaning the input map name.
