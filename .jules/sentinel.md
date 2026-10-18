@@ -1,0 +1,4 @@
+## 2026-10-18 - [CRITICAL] Prevent SSRF in Google Earth Engine Proxy
+**Vulnerability:** The `/api/satellite/tile` endpoint contained a Server-Side Request Forgery (SSRF) vulnerability. The `mapName` query parameter was checked using `startsWith('http')`, and if true, was used directly in an internal `fetch` request. This allowed attackers to pass arbitrary absolute URLs, causing the server to make requests to internal or unauthorized external endpoints.
+**Learning:** Checking if a URL parameter starts with `http` is insufficient to validate an origin. User-controlled inputs that dictate upstream fetch requests must be strictly validated against an allowlist or completely sanitized to ensure they can only access the intended domain (in this case, Google Earth Engine).
+**Prevention:** Reject absolute URLs by checking for `://` in the parameter and strictly prepend the trusted base URL (`https://earthengine.googleapis.com/v1/`) to the sanitized user input.
