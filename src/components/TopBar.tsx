@@ -82,6 +82,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* New Field Action */}
           <button
             onClick={onNewField}
+            aria-label={t.common.addField}
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#235835] hover:bg-[#1C482A] active:bg-[#163821] rounded-md shadow-xs transition-colors cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
