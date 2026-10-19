@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FarmField, Language, WeatherContext, Coordinate, AIAdvisoryEnvelope, FarmerAction } from './types/farmwatch';
 import { INITIAL_FIELDS } from './utils/mockData';
 import { translations } from './utils/i18n';
@@ -36,6 +36,9 @@ export default function App() {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [newFieldModalOpen, setNewFieldModalOpen] = useState(false);
 
+  // Cache to avoid redundant expensive API calls for weather data
+  const weatherCache = useRef<Record<string, WeatherContext>>({});
+
   const t = translations[language];
 
   // Sync state to local storage safely
@@ -67,6 +70,12 @@ export default function App() {
   useEffect(() => {
     if (!selectedField) return;
 
+    // Use cached data if available for this field
+    if (weatherCache.current[selectedField.id]) {
+      setWeather(weatherCache.current[selectedField.id]);
+      return;
+    }
+
     // Use centroid coordinates of selected field
     const coords = selectedField.currentGeometry.coordinates;
     const avgLng = coords.reduce((acc, c) => acc + c.lng, 0) / coords.length || 73.7898;
@@ -74,7 +83,10 @@ export default function App() {
 
     fetch(`/api/weather?lat=${avgLat}&lon=${avgLng}`)
       .then((res) => res.json())
-      .then((data) => setWeather(data))
+      .then((data) => {
+        weatherCache.current[selectedField.id] = data;
+        setWeather(data);
+      })
       .catch((err) => console.warn('Weather fetch error:', err));
   }, [selectedField?.id]);
 
