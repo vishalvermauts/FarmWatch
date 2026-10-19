@@ -1,0 +1,4 @@
+## 2025-10-24 - SSRF & Token Leak in GEE Proxy Endpoint
+**Vulnerability:** The `/api/satellite/tile` endpoint in `server.ts` allowed the `mapName` query parameter to start with `http`, which resulted in the server sending an authenticated request (with the GEE OAuth Bearer token) to an arbitrary attacker-controlled domain. This acts as a Server-Side Request Forgery (SSRF) and completely exposes the high-privileged Earth Engine API token.
+**Learning:** Checking `.startsWith('http')` to allow overriding of a base URL when sending authenticated requests is highly dangerous because it allows attackers to redirect the authenticated request to their own servers and steal tokens.
+**Prevention:** Strictly enforce the base URL domain and reject any absolute URLs passed via user input when making backend requests, especially those carrying authentication tokens.
