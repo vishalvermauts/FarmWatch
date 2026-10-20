@@ -679,6 +679,7 @@ export const CropAssessmentView: React.FC<CropAssessmentViewProps> = ({
               </div>
               <button
                 onClick={() => setActiveReference(null)}
+                aria-label={t.common.close}
                 className="text-[#657E6D] hover:text-[#14261A] text-lg font-bold"
               >
                 ×
