@@ -360,6 +360,16 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
     let row = 0;
     const ctx = sampleContextRef.current;
 
+    // Batch getImageData for performance
+    let canvasData: ImageData | null = null;
+    if (ctx) {
+      try {
+        canvasData = ctx.getImageData(0, 0, 600, 400);
+      } catch (e) {
+        // Fallback for cross-origin issues
+      }
+    }
+
     for (let lat = startLat; lat <= endLat; lat += dLat) {
       let col = 0;
 
@@ -374,16 +384,12 @@ export const FieldGisView: React.FC<FieldGisViewProps> = ({
         let g = 140;
         let b = 95;
 
-        if (ctx && centerX >= 0 && centerX < 600 && centerY >= 0 && centerY < 400) {
-          try {
-            const data = ctx.getImageData(centerX, centerY, 1, 1).data;
-            if (data[3] > 0) {
-              r = data[0];
-              g = data[1];
-              b = data[2];
-            }
-          } catch (e) {
-            // Safe fallback if cross-origin canvas blocked
+        if (canvasData && centerX >= 0 && centerX < 600 && centerY >= 0 && centerY < 400) {
+          const pixelIndex = (centerY * 600 + centerX) * 4;
+          if (canvasData.data[pixelIndex + 3] > 0) {
+            r = canvasData.data[pixelIndex];
+            g = canvasData.data[pixelIndex + 1];
+            b = canvasData.data[pixelIndex + 2];
           }
         }
 
