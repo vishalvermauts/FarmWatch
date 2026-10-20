@@ -1,0 +1,4 @@
+## 2023-10-20 - [Fix Server-Side Request Forgery (SSRF) in Tile Proxy]
+**Vulnerability:** The `/api/satellite/tile` endpoint passed user-controlled input (`mapName`) directly into a backend `fetch` URL without sufficient validation. It checked if `mapName` started with `http` to support full Earth Engine URLs, but did not restrict the domain, allowing an attacker to force the server to make requests to arbitrary URLs (e.g. `http://attacker.com` or internal AWS metadata IP `http://169.254.169.254`).
+**Learning:** Checking that a string `startsWith('http')` is not a sufficient domain validation. When an API acts as a proxy for a specific third-party service, we must strictly allowlist the domain (e.g. `https://earthengine.googleapis.com/`).
+**Prevention:** Always restrict URLs used in backend fetch requests to trusted domain prefixes. Reject requests rather than attempting to fix complex malicious URLs.
