@@ -766,6 +766,14 @@ app.get('/api/satellite/tile', async (req: Request, res: Response) => {
     const cleanMapName = mapName.startsWith('http')
       ? mapName
       : `https://earthengine.googleapis.com/v1/${mapName.replace(/^\/+/, '')}`;
+
+    // SECURITY: Prevent SSRF and credential leakage to external servers
+    if (!cleanMapName.startsWith('https://earthengine.googleapis.com/')) {
+      console.warn('[Security] SSRF attempt blocked in /api/satellite/tile');
+      res.setHeader('Content-Type', 'image/png');
+      return res.status(403).send(TRANSPARENT_PNG);
+    }
+
     const geeTileUrl = `${cleanMapName}/tiles/${z}/${x}/${y}`;
 
     const tileResp = await fetch(geeTileUrl, {
