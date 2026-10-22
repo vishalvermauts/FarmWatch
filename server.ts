@@ -766,6 +766,13 @@ app.get('/api/satellite/tile', async (req: Request, res: Response) => {
     const cleanMapName = mapName.startsWith('http')
       ? mapName
       : `https://earthengine.googleapis.com/v1/${mapName.replace(/^\/+/, '')}`;
+
+    // SECURITY: Prevent SSRF and token leakage to external domains
+    if (!cleanMapName.startsWith('https://earthengine.googleapis.com/')) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.status(403).send(TRANSPARENT_PNG);
+    }
+
     const geeTileUrl = `${cleanMapName}/tiles/${z}/${x}/${y}`;
 
     const tileResp = await fetch(geeTileUrl, {
